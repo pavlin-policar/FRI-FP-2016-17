@@ -16,7 +16,7 @@ fun gcd (a, 0) = a
 fun len xs = foldr (fn(_, y) => y + 1) 0 xs
 
 (* Last element of the list, if it exists *)
-fun last [] = NONE
+fun last ([] : int list) = NONE
   | last (x::[]) = SOME x
   | last (_::xs) = last xs
 
