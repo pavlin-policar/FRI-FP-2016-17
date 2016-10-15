@@ -35,7 +35,7 @@ fun delete ([] : int list, _) = []
   | delete ((x::xs), n) = if x = n then delete (xs, n) else x::(delete (xs, n))
 
 (* Reverse a list *)
-fun reverse [] = []
+fun reverse ([] : int list) = []
   | reverse (x::xs) = (reverse xs)@[x]
 
 (* Check if list is a palindrome *)
