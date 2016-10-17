@@ -53,7 +53,7 @@ type person = { age : int, name : string }
 
 (* Find the oldest individual in a list of person records *)
 fun oldest [] = NONE
-  | oldest (lst : person list) =
+  | oldest lst =
       let
         fun older ((x : person), (y : person)) = if #age x > #age y then x else y
       in
