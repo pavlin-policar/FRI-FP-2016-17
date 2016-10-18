@@ -5,6 +5,14 @@ datatype natural = NEXT of natural
 datatype bstree = br of bstree * int * bstree
                 | lf
 
+(* Convert natural number to integer *)
+fun toInt ZERO = 0
+  | toInt (NEXT n) = 1 + toInt n
+
+(* Add two natrual numbers together *)
+fun add (a, ZERO) = a
+  | add (a, NEXT b) = NEXT (add (a, b))
+
 (* Find the min in the BST *)
 fun min lf = NONE
   | min (br (lf, value, _)) = SOME value
@@ -37,16 +45,14 @@ fun toList lf = []
 fun valid lf = true
   | valid (br (left, value, right)) =
       let
-        fun valueOf (br (_, v, _)) = v | valueOf lf = ~1
-        fun ordered (lf, _, lf) = true
-          | ordered (left, value, lf) = valueOf left < value
-          | ordered (lf, value, right) = value < valueOf right
-          | ordered (left, value, right) =
-              valueOf left < value andalso value < valueOf right
+        fun checkLeft NONE = true
+          | checkLeft (SOME n) = n < value
+        fun checkRight NONE = true
+          | checkRight (SOME n) = n > value
       in
-        valid left andalso valid right andalso ordered (left, value, right)
+        valid left andalso valid right andalso
+        checkLeft (max left) andalso checkRight (min right)
       end
-
 
 (* Create a person record for sanity *)
 type person = { age : int, name : string }
@@ -59,3 +65,4 @@ fun oldest [] = NONE
       in
         SOME (#name (foldl older (hd lst) (tl lst)))
       end
+
