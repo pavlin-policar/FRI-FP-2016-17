@@ -41,17 +41,17 @@ fun countBranches lf = 0
 fun toList lf = []
   | toList (br (left, value, right)) = (toList left)@[value]@(toList right)
 
+(* No real need for an explanation *)
+fun dropWhile _ [] = []
+  | dropWhile f (x::xs) = if f x then dropWhile f xs else x::xs
+
 (* Check if a BST is valid *)
 fun valid lf = true
   | valid (br (left, value, right)) =
       let
-        fun checkLeft NONE = true
-          | checkLeft (SOME n) = n < value
-        fun checkRight NONE = true
-          | checkRight (SOME n) = n > value
+        val lst = toList (br (left, value, right))
       in
-        valid left andalso valid right andalso
-        checkLeft (max left) andalso checkRight (min right)
+        null (dropWhile (fn (x, y) => x < y) (ListPair.zip (lst, tl lst)))
       end
 
 (* Create a person record for sanity *)
