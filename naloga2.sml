@@ -30,12 +30,11 @@ fun contains (lf, _) = false
 
 (* Count the number of `lf` in the BST *)
 fun countLeaves lf = 1
-  | countLeaves (br (left, _, right)) = countLeaves left + countLeaves right
+  | countLeaves (br (l, _, r)) = countLeaves l + countLeaves r
 
 (* Count the number of `br` in BST *)
 fun countBranches lf = 0
-  | countBranches (br (left, _, right)) =
-      countBranches left + 1 + countBranches right
+  | countBranches (br (l, _, r)) = countBranches l + 1 + countBranches r
 
 (* Convert the BST to an ascending ordered list *)
 fun toList lf = []
