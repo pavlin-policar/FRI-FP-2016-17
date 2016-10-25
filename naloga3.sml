@@ -47,7 +47,7 @@ fun max x y = if x > y then x else y
 (* Get the depth of a tree node *)
 fun depth lf = 0
   | depth (br (left, _, right)) = max (depth left) (depth right) + 1
-=
+
 (* Utility method for testing - not really used anywhere at inside AVL *)
 fun diff lf = 0
   | diff (br (l, v, r)) = (depth l) - (depth r)
