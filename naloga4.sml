@@ -51,10 +51,3 @@ fun equivalence_classes f xs =
     filter (fn y => not (f x y)) rest
   )) ([], xs) xs)
 
-(* test *)
-fun equiva x y = x mod 3 = y mod 3
-fun equivc (x : (''a * ''a)) (y : (''a * ''a)) = #1 x = #2 y
-
-val testa = equivalence_classes equiva [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-val testc = equivalence_classes equivc [(1,1),(2,2),(3,3),(2,3),(1,3),(3,1)]
-
