@@ -24,13 +24,14 @@ fun quicksort [] = []
 fun dot x y = foldl op+ 0 (ListPair.map op* (x, y))
 
 (* Transpose a matrix *)
-fun transpose ([]::_) = []
+fun transpose [] = []
+  | transpose ([]::_) = []
   | transpose rows = (map hd rows)::(transpose (map tl rows))
 
 (* Multiply two matrices *)
 fun multiply x y = map (fn xi => map (fn yj => dot xi yj) (transpose y)) x
 
-(* TODO This is hideous *)
+(* TODO This seems overly complicated *)
 (* Group consecutive elements in a list *)
 fun group [] = []
   | group (x::xs) =
@@ -38,12 +39,22 @@ fun group [] = []
                       then (x, n + 1)::ys
                       else (x, 1)::y) [(x, 1)] xs)
 
-(* TODO The type doesn't match - 'a vs ''a *)
+(* TODO This must be a better way... *)
 (* Generate equivalence lists for a list given an equivalence function *)
-fun equivalence_classes f xs = map (fn x => filter (fn y => f x y) xs) xs
+fun equivalence_classes f xs =
+  #1 (foldr (fn (x, (a, rest)) => (
+    let
+      val ys = filter (fn y => f x y) rest
+    in
+      if null ys then a else ys::a
+    end,
+    filter (fn y => not (f x y)) rest
+  )) ([], xs) xs)
 
 (* test *)
-fun equiv x y = x mod 3 = y mod 3
-fun equiv x y = x = y mod 3
+fun equiva x y = x mod 3 = y mod 3
+fun equivc (x : (''a * ''a)) (y : (''a * ''a)) = #1 x = #2 y
 
-val test = equivalence_classes equiv [1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+val testa = equivalence_classes equiva [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+val testc = equivalence_classes equivc [(1,1),(2,2),(3,3),(2,3),(1,3),(3,1)]
+
