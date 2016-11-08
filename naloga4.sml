@@ -13,8 +13,8 @@ val only_even = filter (fn x => x mod 2 = 0)
 fun longest_string_helper f =
   foldl (fn (x, a) => if f (size x, size a) then x else a) ""
 
-val longest_string_first = longest_string_helper (fn (x, y) => x > y)
-val longest_string_last = longest_string_helper (fn (x, y) => x >= y)
+val longest_string_first = longest_string_helper op>
+val longest_string_last = longest_string_helper op>=
 
 fun quicksort [] = []
   | quicksort (x::xs) =
