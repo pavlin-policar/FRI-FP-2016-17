@@ -1,6 +1,8 @@
 (*
  * FP Seminar 1
  *)
+Control.Print.printDepth := 100;
+
 
 datatype expression = Constant of int
                     | Variable of string
@@ -72,4 +74,27 @@ fun eval _ (Constant x) = x
       else raise InvalidExpression
   | eval _ _ = raise InvalidExpression
 
+(* Naloga 4
+ * Calculate the derivative of an expression
+ *)
+fun derivative (Constant _) _ = Constant 0
+  | derivative (Variable x) d = Constant (if x = d then 1 else 0)
+  | derivative (Operator ("+", (Pair (x::y::_)))) d =
+      Operator ("+", Pair [derivative x d, derivative y d])
+  | derivative (Operator ("-", (Pair (x::y::_)))) d =
+      Operator ("-", Pair [derivative x d, derivative y d])
+  | derivative (Operator ("*", (Pair (x::y::_)))) d =
+      Operator ("+", Pair [
+        Operator ("*", Pair [derivative x d, y]),
+        Operator ("*", Pair [derivative y d, x])
+      ])
+  | derivative (Operator ("/", (Pair (x::y::_)))) d =
+      Operator ("/", Pair [
+        Operator ("-", Pair [
+          Operator ("*", Pair [derivative x d, y]),
+          Operator ("*", Pair [derivative y d, x])
+        ]),
+        Operator ("*", Pair [y, y])
+      ])
+  | derivative _ _ = raise InvalidExpression
 
