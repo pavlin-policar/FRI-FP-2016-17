@@ -11,8 +11,7 @@ datatype expression = Constant of int
 (* Naloga 1
  * Cartesian product that returns a list of tuples
  *)
-fun cross (a, b) =
-  foldr (fn (x, y) => x@y) [] (map (fn x => map (fn y => (x, y)) b) a)
+fun cross (a, b) = foldr (fn (x, xa) => (map (fn y => (x, y)) b)@xa) [] a
 
 (* Naloga 2
  * Combinations of lists
@@ -33,4 +32,8 @@ fun cross_lists_ke x [] = x
   | cross_lists_ke a b = cross_lists a b
 
 fun combinations ls = foldr (fn (l, la) => cross_lists_ke (listify l) la) [] ls
+
+(* Naloga 3
+ * Evaluate an expression
+ *)
 
