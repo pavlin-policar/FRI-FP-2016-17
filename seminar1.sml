@@ -8,6 +8,15 @@ datatype expression = Constant of int
                     | Pair of expression list
                     | List of expression list
 
+exception InvalidVariable of string
+exception InvalidExpression
+
+(* Convenience bindings *)
+fun div' (x, y) = x div y
+fun mod' (x, y) = x mod y
+fun eq x y = x = y
+val exists = List.exists
+
 (* Naloga 1
  * Cartesian product that returns a list of tuples
  *)
@@ -36,4 +45,31 @@ fun combinations ls = foldr (fn (l, la) => cross_lists_ke (listify l) la) [] ls
 (* Naloga 3
  * Evaluate an expression
  *)
+fun str_to_operator opr =
+  case opr of
+       "+" => foldl op+ 0
+     | "*" => foldl op* 1
+     | "-" => foldl op- 0
+     | "/" => foldl div' 1
+     | "%" => foldl mod' 1
+     | _ => raise InvalidExpression
+
+(* Evalue an expression given variables to use *)
+fun eval _ (Constant x) = x
+  (* Variable *)
+  | eval [] (Variable name) = raise InvalidVariable name
+  | eval ((vname, value)::xs) (var as Variable name) =
+      if vname = name then value else eval xs var
+  (* Operator with Pair *)
+  | eval vars (Operator (opr, (Pair p))) =
+      if length p = 2
+      then str_to_operator opr (map (eval vars) p)
+      else raise InvalidExpression
+  (* Operator with List *)
+  | eval vars (Operator (opr, (List l))) =
+      if exists (eq opr) ["+", "*"]
+      then str_to_operator opr (map (eval vars) l)
+      else raise InvalidExpression
+  | eval _ _ = raise InvalidExpression
+
 
