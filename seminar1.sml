@@ -58,19 +58,16 @@ fun str_to_operator opr =
 
 (* Evalue an expression given variables to use *)
 fun eval _ (Constant x) = x
-  (* Variable *)
   | eval [] (Variable name) = raise InvalidVariable name
   | eval ((vname, value)::xs) (var as Variable name) =
       if vname = name then value else eval xs var
-  (* Operator with Pair *)
   | eval vars (Operator (opr, (Pair p))) =
-      if length p = 2
-      then str_to_operator opr (map (eval vars) p)
+      if length p = 2 then
+        str_to_operator opr (map (eval vars) p)
       else raise InvalidExpression
-  (* Operator with List *)
   | eval vars (Operator (opr, (List l))) =
-      if exists (eq opr) ["+", "*"]
-      then str_to_operator opr (map (eval vars) l)
+      if exists (eq opr) ["+", "*"] then
+        str_to_operator opr (map (eval vars) l)
       else raise InvalidExpression
   | eval _ _ = raise InvalidExpression
 
