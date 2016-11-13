@@ -95,3 +95,54 @@ fun derivative (Constant _) _ = Constant 0
       ])
   | derivative _ _ = raise InvalidExpression
 
+(* Naloga 5
+ * Flatten an expression as a sum of products
+ *)
+fun flatten (c as Constant _) = c
+  | flatten (x as Variable _) = x
+  | flatten (Operator (opr, (Pair expr))) = flatten (Operator (opr, List expr))
+  | flatten (Operator ("+", l as (List expr))) = l
+  | flatten (Operator ("-", l as (List expr))) = l
+  (*| flatten (Operator ("*", (List expr))) =
+      List (foldl (fn (x, a) => map List (cross_lists (listify x) a)@a) []
+      expr)*)
+  | flatten _ = raise InvalidExpression
+
+(* Split an expression into unary expressions
+ * Example:  (x - 2 - 3) -> (+ (+x) (-2) (-3))
+ *)
+fun split_expr (Operator (_, List [])) = []
+  | split_expr (Operator (_, List (x::[]))) = [Operator ("+", List [x])]
+  | split_expr (Operator (s, (List e))) =
+      (Operator ("+", List [hd e]))::
+      (map (fn x => (Operator (s, List [x]))) (tl e))
+
+fun sign "+" "-" = "-" | sign "-" "+" = "-" | sign _ _ = "+"
+
+fun distribute (e1 : expression) (e2 : expression) : expression list =
+  let
+    val split = listify o split_expr
+    (* Merge expressions produced by cross_lists.
+     * Will nicely merge expressions with "+", but will still work on "-"
+     *)
+    fun m ((e1 as (Operator (s1, List l1)))::(e2 as (Operator (s2, List l2)))::[]) =
+      if sign s1 s2 = "-" then
+        Operator ("*", List [e1, e2])
+      else Operator ("*", List (l1@l2))
+  in
+    map m (cross_lists (split e1) (split e2))
+  end
+
+fun distribute_ke x (Operator (_, List [])) = [x]
+  | distribute_ke (Operator (_, List [])) y = [y]
+  | distribute_ke x y = distribute x y
+
+fun distribute' (Operator ("*", List l)) =
+  foldr (fn (x, xa) => (foldr (fn (y, ya) => (distribute_ke x y)@ya) [] xa)@xa) [] l
+
+val test = distribute' (Operator ("*", List [
+  (Operator ("+", List [Variable "a", Variable "b"])),
+  (Operator ("+", List [Constant 2, Constant 4])),
+  (Operator ("+", List [Variable "x", Variable "y"]))
+]));
+
