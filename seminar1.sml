@@ -17,7 +17,25 @@ exception InvalidExpression
 fun div' (x, y) = x div y
 fun mod' (x, y) = x mod y
 fun eq x y = x = y
+
 val exists = List.exists
+val filter = List.filter
+
+(* Sorting the expression term order *)
+fun lt_expr (Constant x) (Constant y) = x < y
+  | lt_expr (Constant _) _ = true
+  | lt_expr _ (Constant _) = false
+  | lt_expr (Variable x) (Variable y) = x < y
+  | lt_expr (Variable _) _ = true
+  | lt_expr _ (Variable _) = false
+  | lt_expr _ _ = true
+fun gte_expr x y = not (lt_expr x y)
+
+fun sort_expr [] = []
+  | sort_expr (x::xs) =
+    (sort_expr (filter (gte_expr x) xs))@[x]@(sort_expr (filter (lt_expr x) xs))
+
+fun operator s exp = Operator (s, List (sort_expr exp))
 
 (* Naloga 1
  * Cartesian product that returns a list of tuples
