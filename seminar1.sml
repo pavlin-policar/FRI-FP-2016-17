@@ -116,51 +116,77 @@ fun derivative (Constant _) _ = Constant 0
 (* Naloga 5
  * Flatten an expression as a sum of products
  *)
-fun flatten (c as Constant _) = c
-  | flatten (x as Variable _) = x
-  | flatten (Operator (opr, (Pair expr))) = flatten (Operator (opr, List expr))
-  | flatten (Operator ("+", l as (List expr))) = l
-  | flatten (Operator ("-", l as (List expr))) = l
-  (*| flatten (Operator ("*", (List expr))) =
-      List (foldl (fn (x, a) => map List (cross_lists (listify x) a)@a) []
-      expr)*)
-  | flatten _ = raise InvalidExpression
 
-(* Split an expression into unary expressions
- * Example:  (x - 2 - 3) -> (+ (+x) (-2) (-3))
+(* Simplify the expression using the distribution property *)
+fun distribute_two (Operator (s1, Pair l1)) (Operator (s2, Pair l2)) =
+      distribute_two (Operator (s1, List l1)) (Operator (s2, List l2))
+  | distribute_two (c as (Constant _)) (e as (Operator _)) = distribute_two e c
+  | distribute_two (x as (Variable _)) (e as (Operator _)) = distribute_two e x
+  | distribute_two (Operator (_, List l)) (c as Constant _) =
+      map (operator "*") (cross_lists (listify l) (listify [c]))
+  | distribute_two (Operator (_, List l)) (x as Variable _) =
+      map (operator "*") (cross_lists (listify l) (listify [x]))
+  | distribute_two (Operator (_, List l1)) (Operator (_, List l2)) =
+      map (operator "*") (cross_lists (listify l1) (listify l2))
+
+fun merge opr (c as Constant _) e = merge opr e c
+  | merge opr (x as Variable _) e = merge opr e x
+  (* (1 + 2) + a = 1 + 2 + a *)
+  | merge "+" (Operator ("+", List e)) (c as Constant _) = operator "+" (c::e)
+  | merge "+" (Operator ("+", List e)) (x as Variable _) = operator "+" (x::e)
+  (* (a + b) + (c + d) = a + b + c + d *)
+  | merge "+" (Operator (_, List e1)) (Operator (_, List e2)) =
+      operator "+" (e1@e2)
+  (* (1 * 2) * a = 1 * 2 * a *)
+  | merge "*" (Operator ("*", List e)) (c as Constant _) = operator "*" (c::e)
+  | merge "*" (Operator ("*", List e)) (v as Variable _) = operator "*" (v::e)
+  (* 2 * (x + y) = 2x + 2y *)
+  | merge "*" (e as (Operator ("+", _))) (c as Constant _) =
+      operator "+" (distribute_two c e)
+  (* 2 * (x + y) = 2x + 2y *)
+  | merge "*" (e as (Operator ("+", _))) (x as Variable _) =
+      operator "+" (distribute_two x e)
+  (* (a + b) * (c + d) = ac + ad + bc + bd *)
+  | merge opr (e1 as (Operator ("*", _))) (e2 as (Operator ("*", _))) =
+      operator "+" (distribute_two e1 e2)
+
+fun distribute_two_ke x (Operator (_, Pair [])) = [x]
+  | distribute_two_ke (Operator (_, Pair [])) y = [y]
+  | distribute_two_ke x (Operator (_, List [])) = [x]
+  | distribute_two_ke (Operator (_, List [])) y = [y]
+  | distribute_two_ke x y = distribute_two x y
+
+fun distribute (Operator ("*", List l)) =
+  Operator ("+", List (foldr (fn (x, xa) => (
+    (distribute_two_ke x (Operator ("", List [Constant 5])))@xa
+  )) [] l))
+
+(* Naloga 7
+ * Remove empty nodes from the equation
  *)
-fun split_expr (Operator (_, List [])) = []
-  | split_expr (Operator (_, List (x::[]))) = [Operator ("+", List [x])]
-  | split_expr (Operator (s, (List e))) =
-      (Operator ("+", List [hd e]))::
-      (map (fn x => (Operator (s, List [x]))) (tl e))
+val removeOnes = let fun rm (Constant 1) = false | rm _ = true in filter rm end
+val removeZeros = let fun rm (Constant 0) = false | rm _ = true in filter rm end
+val hasZero = let fun z (Constant 0) = true | z _ = false in exists z end
+fun reduceMult l = if hasZero l then [] else l
+(* Return 0 if the expression length is 0 *)
+fun exprEmpty (Operator (_, List [])) = Constant 0
+  | exprEmpty e = e
 
-fun sign "+" "-" = "-" | sign "-" "+" = "-" | sign _ _ = "+"
+fun removeEmpty (c as Constant _) = c
+  | removeEmpty (x as Variable _) = x
+  | removeEmpty (Operator ("*", List l)) =
+      exprEmpty (operator "*" ((reduceMult o removeOnes) (map removeEmpty l)))
+  | removeEmpty (Operator ("+", List l)) =
+      exprEmpty (operator "+" (removeZeros (map removeEmpty l)))
 
-fun distribute (e1 : expression) (e2 : expression) : expression list =
-  let
-    val split = listify o split_expr
-    (* Merge expressions produced by cross_lists.
-     * Will nicely merge expressions with "+", but will still work on "-"
-     *)
-    fun m ((e1 as (Operator (s1, List l1)))::(e2 as (Operator (s2, List l2)))::[]) =
-      if sign s1 s2 = "-" then
-        Operator ("*", List [e1, e2])
-      else Operator ("*", List (l1@l2))
-  in
-    map m (cross_lists (split e1) (split e2))
-  end
 
-fun distribute_ke x (Operator (_, List [])) = [x]
-  | distribute_ke (Operator (_, List [])) y = [y]
-  | distribute_ke x y = distribute x y
-
-fun distribute' (Operator ("*", List l)) =
-  foldr (fn (x, xa) => (foldr (fn (y, ya) => (distribute_ke x y)@ya) [] xa)@xa) [] l
-
-val test = distribute' (Operator ("*", List [
-  (Operator ("+", List [Variable "a", Variable "b"])),
-  (Operator ("+", List [Constant 2, Constant 4])),
+val test_m1 = merge "+"
+  (Variable "x")
+  (Operator ("+", List [Variable "c", Constant 2]))
+val test_m2 = merge "*"
+  (Variable "x")
+  (Operator ("*", List [Variable "c", Constant 2]))
+val test_m3 = merge "*"
+  (Constant 2)
   (Operator ("+", List [Variable "x", Variable "y"]))
-]));
 
