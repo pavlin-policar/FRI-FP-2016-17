@@ -21,6 +21,10 @@ fun eq x y = x = y
 val exists = List.exists
 val filter = List.filter
 
+fun dropWhile _ [] = []
+  | dropWhile f (x::xs) = if f x then dropWhile f xs else x::xs
+fun dropWhileR f = rev o (dropWhile f) o rev
+
 (* Sorting the expression term order *)
 fun lt_expr (Constant x) (Constant y) = x < y
   | lt_expr (Constant _) _ = true
@@ -164,7 +168,8 @@ fun distribute (Operator ("*", List l)) =
 (* Naloga 7
  * Remove empty nodes from the equation
  *)
-val removeOnes = let fun rm (Constant 1) = false | rm _ = true in filter rm end
+fun isOne (Constant 1) = true | isOne _ = false
+val removeOnes = filter (not o isOne)
 val removeZeros = let fun rm (Constant 0) = false | rm _ = true in filter rm end
 fun reduceMult l = let
   val hasZero = let fun z (Constant 0) = true | z _ = false in exists z end
@@ -179,7 +184,7 @@ fun removeEmpty (c as Constant _) = c
   | removeEmpty (Operator (opr, Pair p)) = removeEmpty (Operator (opr, List p))
   | removeEmpty (Operator ("*", List l)) =
       reduceList (operator "*" ((reduceMult o removeOnes) (map removeEmpty l)))
-  | removeEmpty (Operator ("/", List (x::(Constant 1)::[]))) = x
+  | removeEmpty (Operator ("/", List l)) = operator "/" (dropWhileR isOne l)
   | removeEmpty (Operator ("+", List l)) =
       reduceList (operator "+" (removeZeros (map removeEmpty l)))
   | removeEmpty (Operator ("-", List l)) =
