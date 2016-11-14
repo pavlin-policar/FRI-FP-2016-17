@@ -169,11 +169,10 @@ fun distribute (Operator ("*", List l)) =
  * Remove empty nodes from the equation
  *)
 fun isOne (Constant 1) = true | isOne _ = false
+fun isZero (Constant 0) = true | isZero _ = false
 val removeOnes = filter (not o isOne)
-val removeZeros = let fun rm (Constant 0) = false | rm _ = true in filter rm end
-fun reduceMult l = let
-  val hasZero = let fun z (Constant 0) = true | z _ = false in exists z end
-in if hasZero l then [] else l end
+val removeZeros = filter (not o isZero)
+fun reduceMult l = if exists isZero l then [] else l
 (* Try to reduce a list of expressions into a single value, if possible *)
 fun reduceList (Operator (_, List [])) = Constant 0
   | reduceList (Operator (_, List (x::[]))) = x
