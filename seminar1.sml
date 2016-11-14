@@ -166,18 +166,25 @@ fun distribute (Operator ("*", List l)) =
  *)
 val removeOnes = let fun rm (Constant 1) = false | rm _ = true in filter rm end
 val removeZeros = let fun rm (Constant 0) = false | rm _ = true in filter rm end
-val hasZero = let fun z (Constant 0) = true | z _ = false in exists z end
-fun reduceMult l = if hasZero l then [] else l
-(* Return 0 if the expression length is 0 *)
-fun exprEmpty (Operator (_, List [])) = Constant 0
-  | exprEmpty e = e
+fun reduceMult l = let
+  val hasZero = let fun z (Constant 0) = true | z _ = false in exists z end
+in if hasZero l then [] else l end
+(* Try to reduce a list of expressions into a single value, if possible *)
+fun reduceList (Operator (_, List [])) = Constant 0
+  | reduceList (Operator (_, List (x::[]))) = x
+  | reduceList e = e
 
 fun removeEmpty (c as Constant _) = c
   | removeEmpty (x as Variable _) = x
+  | removeEmpty (Operator (opr, Pair p)) = removeEmpty (Operator (opr, List p))
   | removeEmpty (Operator ("*", List l)) =
-      exprEmpty (operator "*" ((reduceMult o removeOnes) (map removeEmpty l)))
+      reduceList (operator "*" ((reduceMult o removeOnes) (map removeEmpty l)))
+  | removeEmpty (Operator ("/", List (x::(Constant 1)::[]))) = x
   | removeEmpty (Operator ("+", List l)) =
-      exprEmpty (operator "+" (removeZeros (map removeEmpty l)))
+      reduceList (operator "+" (removeZeros (map removeEmpty l)))
+  | removeEmpty (Operator ("-", List l)) =
+      reduceList (operator "-" (removeZeros (map removeEmpty l)))
+  | removeEmpty _ = raise InvalidExpression
 
 
 val test_m1 = merge "+"
