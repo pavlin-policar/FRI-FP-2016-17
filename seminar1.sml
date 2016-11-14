@@ -11,7 +11,7 @@ datatype expression = Constant of int
                     | List of expression list
 
 exception InvalidVariable of string
-exception InvalidExpression
+exception InvalidExpression of expression
 
 (* Convenience bindings *)
 fun div' (x, y) = x div y
@@ -69,6 +69,7 @@ fun combinations ls = foldr (fn (l, la) => cross_lists_ke (listify l) la) [] ls
 (* Naloga 3
  * Evaluate an expression
  *)
+exception InvalidOperator
 fun str_to_operator opr =
   case opr of
        "+" => foldl op+ 0
@@ -76,22 +77,24 @@ fun str_to_operator opr =
      | "-" => foldl op- 0
      | "/" => foldl div' 1
      | "%" => foldl mod' 1
-     | _ => raise InvalidExpression
+     | _ => raise InvalidOperator
 
+(* TODO Fix eval for subtraction division mod *)
 (* Evalue an expression given variables to use *)
 fun eval _ (Constant x) = x
   | eval [] (Variable name) = raise InvalidVariable name
   | eval ((vname, value)::xs) (var as Variable name) =
       if vname = name then value else eval xs var
-  | eval vars (Operator (opr, (Pair p))) =
+  | eval vars (e as Operator (opr, (Pair p))) =
       if length p = 2 then
         str_to_operator opr (map (eval vars) p)
-      else raise InvalidExpression
-  | eval vars (Operator (opr, (List l))) =
+        handle InvalidOperator => raise InvalidExpression e
+      else raise InvalidExpression e
+  | eval vars (e as Operator (opr, (List l))) =
       if exists (eq opr) ["+", "*"] then
         str_to_operator opr (map (eval vars) l)
-      else raise InvalidExpression
-  | eval _ _ = raise InvalidExpression
+      else raise InvalidExpression e
+  | eval _ e = raise InvalidExpression e
 
 (* Naloga 4
  * Calculate the derivative of an expression
@@ -115,7 +118,7 @@ fun derivative (Constant _) _ = Constant 0
         ]),
         Operator ("*", Pair [y, y])
       ])
-  | derivative _ _ = raise InvalidExpression
+  | derivative e _ = raise InvalidExpression e
 
 (* Naloga 5
  * Flatten an expression as a sum of products
@@ -188,7 +191,7 @@ fun removeEmpty (c as Constant _) = c
       reduceList (operator "+" (removeZeros (map removeEmpty l)))
   | removeEmpty (Operator ("-", List l)) =
       reduceList (operator "-" (removeZeros (map removeEmpty l)))
-  | removeEmpty _ = raise InvalidExpression
+  | removeEmpty e = raise InvalidExpression e
 
 
 val test_m1 = merge "+"
