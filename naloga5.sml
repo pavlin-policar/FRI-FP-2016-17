@@ -52,12 +52,22 @@ fun multiply (x, (Constant 1)) = x
   (* Operator pairs *)
   | multiply ((Operator ("*", Pair l1)), (Operator ("*", Pair l2))) = operator "*" (l1@l2)
   | multiply ((Operator ("*", List l1)), (Operator ("*", List l2))) = operator "*" (l1@l2)
+  | multiply ((Operator ("*", Pair l1)), (c as Constant _)) = operator "*" (c::l1)
+  | multiply ((Operator ("*", List l1)), (c as Constant _)) = operator "*" (c::l1)
+  | multiply ((Operator ("*", Pair l1)), (x as Variable _)) = operator "*" (x::l1)
+  | multiply ((Operator ("*", List l1)), (x as Variable _)) = operator "*" (x::l1)
+  | multiply ((c as Constant _), (Operator ("*", Pair l1))) = operator "*" (c::l1)
+  | multiply ((c as Constant _), (Operator ("*", List l1))) = operator "*" (c::l1)
+  | multiply ((x as Variable _), (Operator ("*", Pair l1))) = operator "*" (x::l1)
+  | multiply ((x as Variable _), (Operator ("*", List l1))) = operator "*" (x::l1)
   | multiply ((e1 as (Operator ("+", _))), e2) = operator "*" [e1, e2]
   | multiply (e1, (e2 as (Operator ("+", _)))) = operator "*" [e1, e2]
   (* Fractions *)
   | multiply ((Operator ("/", (Pair (an::ad::_)))),
               (Operator ("/", (Pair (bn::bd::_))))) =
       fract (multiply (an, bn)) (multiply (ad, bd))
+  | multiply ((e1 as (Operator ("/", _))), e2) = multiply (e1, fractionify e2)
+  | multiply (e1, (e2 as (Operator ("/", _)))) = multiply (fractionify e1, e2)
   (* Anything else *)
   | multiply (e1, e2) = multiply (fractionify e1, fractionify e2)
 
@@ -72,8 +82,16 @@ fun add2 ((Constant 0), x) = x
   (* Operator pairs *)
   | add2 ((Operator ("+", Pair l1)), (Operator ("+", Pair l2))) = operator "+" (l1@l2)
   | add2 ((Operator ("+", List l1)), (Operator ("+", List l2))) = operator "+" (l1@l2)
-  | add2 ((e1 as (Operator ("*", _))), e2) = operator "+" [e1, e2]
-  | add2 (e1, (e2 as (Operator ("*", _)))) = operator "+" [e1, e2]
+  | add2 ((Operator ("+", Pair l1)), (c as Constant _)) = operator "+" (c::l1)
+  | add2 ((Operator ("+", List l1)), (c as Constant _)) = operator "+" (c::l1)
+  | add2 ((Operator ("+", Pair l1)), (x as Variable _)) = operator "+" (x::l1)
+  | add2 ((Operator ("+", List l1)), (x as Variable _)) = operator "+" (x::l1)
+  | add2 ((c as Constant _), (Operator ("+", Pair l1))) = operator "+" (c::l1)
+  | add2 ((c as Constant _), (Operator ("+", List l1))) = operator "+" (c::l1)
+  | add2 ((x as Variable _), (Operator ("+", Pair l1))) = operator "+" (x::l1)
+  | add2 ((x as Variable _), (Operator ("+", List l1))) = operator "+" (x::l1)
+  | add2 ((e1 as (Operator ("+", _))), e2) = operator "+" [e1, e2]
+  | add2 (e1, (e2 as (Operator ("+", _)))) = operator "+" [e1, e2]
   (* Fractions *)
   | add2 ((Operator ("/", Pair (an::(Constant ad)::_))),
           (Operator ("/", Pair (bn::(Constant bd)::_)))) =
@@ -84,6 +102,8 @@ fun add2 ((Constant 0), x) = x
       in
         fracts (add2 (mult1, mult2)) (Constant cm)
       end
+  | add2 ((e1 as (Operator ("/", _))), e2) = add2 (e1, fractionify e2)
+  | add2 (e1, (e2 as (Operator ("/", _)))) = add2 (fractionify e1, e2)
   (* Anything else *)
   | add2 (e1, e2) = add2 (fractionify e1, fractionify e2)
 
