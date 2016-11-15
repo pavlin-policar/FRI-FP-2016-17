@@ -47,6 +47,17 @@ fun multiply ((Constant x), (Constant y)) = Constant (x * y)
               (Operator ("/", (Pair (bn::bd::_))))) =
       fracts (multiply (an, bn)) (multiply (ad, bd))
 
+fun add ((Constant x), (Constant y)) = Constant (x + y)
+  | add ((Operator ("/", (Pair (an::(Constant ad)::_)))),
+         (Operator ("/", (Pair (bn::(Constant bd)::_))))) =
+      let
+        val cm = lcm ad bd
+        val mult1 = multiply (an, Constant (cm div ad))
+        val mult2 = multiply (bn, Constant (cm div bd))
+      in
+        fracts (add (mult1, mult2)) (Constant cm)
+      end
+
 (* NALOGA 3: Add two simple fractions *)
 fun add2 (e1, e2) = e2
 
