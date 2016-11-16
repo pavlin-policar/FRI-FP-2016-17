@@ -4,11 +4,11 @@
 
 Control.Print.printDepth := 100;
 
-datatype expression =  Constant of int |
-        Variable of string |
-        Operator of string * expression |
-        Pair of expression list |
-        List of expression list
+datatype expression = Constant of int
+                    | Variable of string
+                    | Operator of string * expression
+                    | Pair of expression list
+                    | List of expression list
 
 fun gcd a 0 = a | gcd a b = gcd b (a mod b)
 fun lcm a b = (a * b) div (gcd a b)
@@ -133,10 +133,8 @@ fun sum_constants (Constant x) = x
 fun insert_set (x, s) = if not (null x) andalso List.exists (fn (y) => hd x = y) s then s else x@s
 fun all_variables (Constant _) = []
   | all_variables (Variable x) = [x]
-  | all_variables (Operator (_, Pair p)) =
-      foldl insert_set [] (map all_variables p)
-  | all_variables (Operator (_, List p)) =
-      foldl insert_set [] (map all_variables p)
+  | all_variables (Operator (_, Pair p)) = foldl insert_set [] (map all_variables p)
+  | all_variables (Operator (_, List p)) = foldl insert_set [] (map all_variables p)
 
 (* NALOGA 10: Traverse
  * first function on constants, second on variables, third how to merge them,
