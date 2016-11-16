@@ -47,6 +47,7 @@ fun multiply ((Constant x), (Constant y)) = Constant (x * y)
               (Operator ("/", (Pair (bn::bd::_))))) =
       fracts (multiply (an, bn)) (multiply (ad, bd))
 
+(* NALOGA 3: Add two simple fractions *)
 fun add ((Constant x), (Constant y)) = Constant (x + y)
   | add ((Operator ("/", (Pair (an::(Constant ad)::_)))),
          (Operator ("/", (Pair (bn::(Constant bd)::_))))) =
@@ -58,9 +59,58 @@ fun add ((Constant x), (Constant y)) = Constant (x + y)
         fracts (add (mult1, mult2)) (Constant cm)
       end
 
-(* NALOGA 3: Add two simple fractions *)
-fun add2 (e1, e2) = e2
+(* NALOGA 4: Add two regular fractions with variables *)
+fun multiply' (Constant x) (Constant y) = Constant (x * y)
+  | multiply' (x as Variable _) (y as Variable _) = operator "*" [x, y]
+  | multiply' (x as Constant _) (y as Variable _) = operator "*" [x, y]
+  | multiply' (y as Variable _) (x as Constant _) = operator "*" [x, y]
+  (* constant with plus operator *)
+  | multiply' (x as Constant _) (e as (Operator ("+", _))) =
+      operator "*" [x, e]
+  | multiply' (e as (Operator ("+", _))) (x as Constant _) =
+      operator "*" [x, e]
+  (* variable with plus operator *)
+  | multiply' (x as Variable _) (e as (Operator ("+", _))) =
+      operator "*" [x, e]
+  | multiply' (e as (Operator ("+", _))) (x as Variable _) =
+      operator "*" [x, e]
+  (* Multiply with multiplication expression *)
+  | multiply' (x as Constant _) (Operator ("*", (List l))) = operator "*" (x::l)
+  | multiply' (Operator ("*", (List l))) (x as Constant _) = operator "*" (x::l)
+  | multiply' (x as Constant _) (Operator ("*", (Pair l))) = operator "*" (x::l)
+  | multiply' (Operator ("*", (Pair l))) (x as Constant _) = operator "*" (x::l)
+  | multiply' (e1 as (Operator _)) (e2 as (Operator _)) = operator "*" [e1, e2]
 
-(* NALOGA 4: Add together a list of fractions *)
+fun add2 ((Constant x), (Constant y)) = Constant (x + y)
+  | add2 ((x as Variable _), (y as Variable _)) = operator "+" [x, y]
+  (* Add with plus expression *)
+  | add2 ((x as Constant _), (Operator ("+", (List l)))) = operator "+" (x::l)
+  | add2 ((Operator ("+", (List l))), (x as Constant _)) = operator "+" (x::l)
+  | add2 ((x as Constant _), (Operator ("+", (Pair l)))) = operator "+" (x::l)
+  | add2 ((Operator ("+", (Pair l))), (x as Constant _)) = operator "+" (x::l)
+  (* Add two plus expressions *)
+  | add2 ((Operator ("+", (List l1))), (Operator ("+", (List l2)))) =
+    operator "+" (l1@l2)
+  | add2 ((Operator ("+", (Pair l1))), (Operator ("+", (Pair l2)))) =
+    operator "+" (l1@l2)
+  (* Fractions *)
+  | add2 ((Operator ("/", (Pair (an::(Constant ad)::_)))),
+          (Operator ("/", (Pair (bn::(Constant bd)::_))))) =
+      let
+        val cm = lcm ad bd
+        val mult1 = multiply' an (Constant (cm div ad))
+        val mult2 = multiply' bn (Constant (cm div bd))
+      in
+        fracts (add2 (mult1, mult2)) (Constant cm)
+      end
+  | add2 ((e1 as (Operator ("/", _))), (x as (Constant _))) = add2 (e1, fractionify x)
+  | add2 ((x as (Constant _)), (e1 as (Operator ("/", _)))) = add2 (e1, fractionify x)
+  (* Add other expressions *)
+  | add2 ((e1 as (Operator _)), (e2 as (Operator _))) = operator "+" [e1, e2]
+  (* Add with product *)
+  | add2 ((x as (Constant _)), (e as (Operator _))) = operator "+" [x, e]
+  | add2 ((e as (Operator _)), (x as (Constant _))) = operator "+" [x, e]
+
+(* NALOGA 5: Add together a list of fractions *)
 fun add3 ls = foldl add2 (Constant 0) ls
 
