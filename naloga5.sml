@@ -139,3 +139,11 @@ fun all_variables (Constant _) = []
       foldl insert_set [] (map all_variables p)
 
 (* NALOGA 10: Traverse*)
+fun traverse c_f v_f t_f i (Constant x) = c_f x
+  | traverse c_f v_f t_f i (Variable x) = v_f x
+  | traverse c_f v_f t_f i (Operator (_, Pair p)) = foldl t_f i (map (traverse c_f v_f t_f i) p)
+  | traverse c_f v_f t_f i (Operator (_, List p)) = foldl t_f i (map (traverse c_f v_f t_f i) p)
+
+val count_constants = traverse (fn x => 1) (fn x => 0) (fn (x, y) => x + y) 0
+val sum_constants = traverse (fn x => x) (fn x => 0) (fn (x, y) => x + y) 0
+val all_variables = traverse (fn x => []) (fn x => [x]) insert_set []
