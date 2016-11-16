@@ -138,7 +138,10 @@ fun all_variables (Constant _) = []
   | all_variables (Operator (_, List p)) =
       foldl insert_set [] (map all_variables p)
 
-(* NALOGA 10: Traverse*)
+(* NALOGA 10: Traverse
+ * first function on constants, second on variables, third how to merge them,
+ * fourth initial value
+ *)
 fun traverse c_f v_f t_f i (Constant x) = c_f x
   | traverse c_f v_f t_f i (Variable x) = v_f x
   | traverse c_f v_f t_f i (Operator (_, Pair p)) = foldl t_f i (map (traverse c_f v_f t_f i) p)
