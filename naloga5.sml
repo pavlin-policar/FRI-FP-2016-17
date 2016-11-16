@@ -114,3 +114,28 @@ fun add2 ((Constant x), (Constant y)) = Constant (x + y)
 (* NALOGA 5: Add together a list of fractions *)
 fun add3 ls = foldl add2 (Constant 0) ls
 
+(* NALOGA 6: Flatten an expression of fractions *)
+fun flatten e = e
+
+(* NALOGA 7: Count the number of constants in an expression *)
+fun count_constants (Constant _) = 1
+  | count_constants (Variable _) = 0
+  | count_constants (Operator (_, Pair p)) = foldl op+ 0 (map count_constants p)
+  | count_constants (Operator (_, List p)) = foldl op+ 0 (map count_constants p)
+
+(* NALOGA 8: Sum all the constants *)
+fun sum_constants (Constant x) = x
+  | sum_constants (Variable _) = 0
+  | sum_constants (Operator (_, Pair p)) = foldl op+ 0 (map sum_constants p)
+  | sum_constants (Operator (_, List p)) = foldl op+ 0 (map sum_constants p)
+
+(* NALOGA 9: Get a list of all variable names in an expression *)
+fun insert_set (x, s) = if not (null x) andalso List.exists (fn (y) => hd x = y) s then s else x@s
+fun all_variables (Constant _) = []
+  | all_variables (Variable x) = [x]
+  | all_variables (Operator (_, Pair p)) =
+      foldl insert_set [] (map all_variables p)
+  | all_variables (Operator (_, List p)) =
+      foldl insert_set [] (map all_variables p)
+
+(* NALOGA 10: Traverse*)
