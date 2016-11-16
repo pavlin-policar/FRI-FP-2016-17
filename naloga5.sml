@@ -88,7 +88,7 @@ fun multiply' (Constant x) (Constant y) = Constant (x * y)
   | multiply' (Operator ("/", (Pair (an::ad::_)))) (Operator ("/", (Pair (bn::bd::_)))) =
       fract (multiply' an bn) (multiply' ad bd)
   (* Any other multiplication *)
-  | multiply' (e1 as (Operator _)) (e2 as (Operator _)) = operator "*" [e1, e2]
+  | multiply' e1 e2 = operator "*" [e1, e2]
 
 fun add2 ((Constant x), (Constant y)) = Constant (x + y)
   | add2 ((x as Variable _), (y as Variable _)) = operator "+" [x, y]
@@ -114,11 +114,11 @@ fun add2 ((Constant x), (Constant y)) = Constant (x + y)
       end
   | add2 ((e1 as (Operator ("/", _))), (x as (Constant _))) = add2 (e1, fractionify x)
   | add2 ((x as (Constant _)), (e1 as (Operator ("/", _)))) = add2 (e1, fractionify x)
-  (* Add other expressions *)
-  | add2 ((e1 as (Operator _)), (e2 as (Operator _))) = operator "+" [e1, e2]
   (* Add with product *)
   | add2 ((x as (Constant _)), (e as (Operator _))) = operator "+" [x, e]
   | add2 ((e as (Operator _)), (x as (Constant _))) = operator "+" [x, e]
+  (* Add other expressions *)
+  | add2 (e1, e2) = operator "+" [e1, e2]
 
 (* NALOGA 5: Add together a list of fractions *)
 fun add3 ls = foldl add2 (Constant 0) ls
