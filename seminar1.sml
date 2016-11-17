@@ -15,6 +15,7 @@ exception InvalidExpression of expression
 
 (* Convenience bindings *)
 fun eq x y = x = y
+fun id x = x
 
 val exists = List.exists
 val filter = List.filter
@@ -39,6 +40,9 @@ fun sort_expr [] = []
 
 (* This can only be used with commutative operations due to sorting *)
 fun operator s exp = Operator (s, List (sort_expr exp))
+
+fun sort_oper (Operator (opr, List l)) = operator opr (sort_expr l)
+  | sort_oper (Operator (opr, Pair l)) = operator opr (sort_expr l)
 
 fun ++ (e1, e2) = operator "+" [e1, e2]
 infix ++
@@ -177,6 +181,56 @@ fun distribute (Operator ("*", List l)) =
   Operator ("+", List (foldr (fn (x, xa) => (
     (distribute_two_ke x (Operator ("", List [Constant 5])))@xa
   )) [] l))
+
+(* Naloga 6
+ * Join similar nodes together
+ *)
+
+(* First function on constants, second on variables, third how to merge them,
+ * fourth initial value
+ *)
+fun traverse c v t i (Constant x) = c x
+  | traverse c v t i (Variable x) = v x
+  | traverse c v t i (Operator (_, Pair p)) = foldl t i (map (traverse c v t i) p)
+  | traverse c v t i (Operator (_, List p)) = foldl t i (map (traverse c v t i) p)
+  | traverse _ _ _ _ e = raise InvalidExpression e
+
+val allVars = (traverse (fn x => []) (fn x => [x]) (op @) []) o sort_oper
+fun variablesMatch e1 e2 = allVars e1 = allVars e2
+
+(* Find the first const in an expression or return 1 *)
+fun firstConstOrOne (Operator (_, List l)) =
+  let
+    fun matchConst (Constant _) = true | matchConst _ = false
+    val filtered = filter matchConst l
+  in
+    if not (null filtered) then
+      hd filtered
+    else (Constant 1)
+  end
+
+(* Add an together two expressions if they match e.g. x*x to x*x = 2*x*x *)
+fun addToExpr (e, (Operator (_, List []))) = operator "+" [e]
+  | addToExpr (e, (Operator (opr, List (x::xs)))) =
+      if variablesMatch e x then
+        let
+          fun addToConstant (c as Constant _) [] = [c]
+            | addToConstant (Constant c) ((Constant y)::ys) = Constant (c + y)::ys
+            | addToConstant c (y::ys) = y::(addToConstant c ys)
+          val (Operator (_, List xl)) = x
+          val reduced = addToConstant (firstConstOrOne e) xl
+        in
+          operator opr [operator "*" reduced]
+        end
+      else
+        let
+          val Operator (_,  List reduced) = addToExpr (e, operator opr xs)
+        in
+          operator opr (x::reduced)
+        end
+
+fun joinSimilar (Operator (_, List e)) = foldl addToExpr (operator "+" []) e
+
 
 (* Naloga 7
  * Remove empty nodes from the equation
