@@ -14,8 +14,6 @@ exception InvalidVariable of string
 exception InvalidExpression of expression
 
 (* Convenience bindings *)
-fun div' (x, y) = x div y
-fun mod' (x, y) = x mod y
 fun eq x y = x = y
 
 val exists = List.exists
@@ -39,7 +37,19 @@ fun sort_expr [] = []
   | sort_expr (x::xs) =
     (sort_expr (filter (gte_expr x) xs))@[x]@(sort_expr (filter (lt_expr x) xs))
 
+(* This can only be used with commutative operations due to sorting *)
 fun operator s exp = Operator (s, List (sort_expr exp))
+
+fun ++ (e1, e2) = operator "+" [e1, e2]
+infix ++
+fun -- (e1, e2) = Operator ("-", Pair [e1, e2]);
+infix --
+fun ** (e1, e2) = operator "*" [e1, e2];
+infix **
+fun // (e1, e2) = Operator ("/", Pair [e1, e2]);
+infix //
+fun %% (e1, e2) = Operator ("%", Pair [e1, e2]);
+infix %%
 
 (* Naloga 1
  * Cartesian product that returns a list of tuples
@@ -75,20 +85,20 @@ fun str_to_operator opr =
        "+" => foldl op+ 0
      | "*" => foldl op* 1
      | "-" => foldl op- 0
-     | "/" => foldl div' 1
-     | "%" => foldl mod' 1
      | _ => raise InvalidOperator
 
-(* TODO Fix eval for subtraction division mod *)
 (* Evalue an expression given variables to use *)
 fun eval _ (Constant x) = x
   | eval [] (Variable name) = raise InvalidVariable name
   | eval ((vname, value)::xs) (var as Variable name) =
       if vname = name then value else eval xs var
   | eval vars (e as Operator (opr, (Pair p))) =
-      if length p = 2 then
+      if length p = 2 andalso exists (eq opr) ["+", "*", "-"] then
         str_to_operator opr (map (eval vars) p)
-        handle InvalidOperator => raise InvalidExpression e
+      else if opr = "/" then
+        let val (a::b::_) = p in (eval vars a) div (eval vars b) end
+      else if opr = "%" then
+        let val (a::b::_) = p in (eval vars a) mod (eval vars b) end
       else raise InvalidExpression e
   | eval vars (e as Operator (opr, (List l))) =
       if exists (eq opr) ["+", "*"] then
