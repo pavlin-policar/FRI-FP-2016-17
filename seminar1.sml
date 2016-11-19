@@ -16,6 +16,8 @@ exception InvalidExpression of expression
 (* Convenience bindings *)
 fun eq x y = x = y
 fun id x = x
+fun listify x = [x]
+fun vectorize l = map listify l
 
 val exists = List.exists
 val filter = List.filter
@@ -41,53 +43,37 @@ fun sort_expr [] = []
 (* This can only be used with commutative operations due to sorting *)
 fun operator s exp = Operator (s, List (sort_expr exp))
 
-fun sort_oper (Operator (opr, List l)) = operator opr (sort_expr l)
-  | sort_oper (Operator (opr, Pair l)) = operator opr (sort_expr l)
-  | sort_oper (c as Constant _) = c
-  | sort_oper (x as Variable _) = x
-
-fun ++ (e1, e2) = operator "+" [e1, e2]
-infix ++
-fun -- (e1, e2) = Operator ("-", Pair [e1, e2]);
-infix --
-fun ** (e1, e2) = operator "*" [e1, e2];
-infix **
-fun // (e1, e2) = Operator ("/", Pair [e1, e2]);
-infix //
-fun %% (e1, e2) = Operator ("%", Pair [e1, e2]);
-infix %%
+fun sortOper (Operator (opr, List l)) = operator opr (sort_expr l)
+  | sortOper (Operator (opr, Pair l)) = operator opr (sort_expr l)
+  | sortOper (c as Constant _) = c
+  | sortOper (x as Variable _) = x
+  | sortOper e = raise InvalidExpression e
 
 (* Naloga 1
  * Cartesian product that returns a list of tuples
+ * e.g. cross([1,2], [3,4]) = [(1,3),(2,3),(1,4),(2,4)]
  *)
 fun cross (a, b) = foldr (fn (x, xa) => (map (fn y => (x, y)) b)@xa) [] a
 
 (* Naloga 2
  * Combinations of lists
  *)
-
-fun listify x = [x]
-(* Take a list and wrap each element inside another list *)
-fun vectorize l = map listify l
-
 (* Cartesian product on lists of lists *)
-fun cross_lists a b =
+fun crossLists a b =
   foldr (fn (x, xa) => (foldr (fn (y, ya) => (x@y)::ya) [] b)@xa) [] a
 
-(* Cartesian product on lists of lists. In case of one empty list, return other
- * non-empty one
- *)
-fun cross_lists_ke x [] = x
-  | cross_lists_ke [] y = y
-  | cross_lists_ke a b = cross_lists a b
+(* Cartesian product on lists of lists. If one is empty, return other one *)
+fun crossListsKE x [] = x
+  | crossListsKE [] y = y
+  | crossListsKE a b = crossLists a b
 
-fun combinations ls = foldr (fn (l, la) => cross_lists_ke (vectorize l) la) [] ls
+fun combinations ls = foldr (fn (l, la) => crossListsKE (vectorize l) la) [] ls
 
 (* Naloga 3
  * Evaluate an expression
  *)
 exception InvalidOperator
-fun str_to_operator opr =
+fun strToOperator opr =
   case opr of
        "+" => foldl op+ 0
      | "*" => foldl op* 1
@@ -101,7 +87,7 @@ fun eval _ (Constant x) = x
       if vname = name then value else eval xs var
   | eval vars (e as Operator (opr, (Pair p))) =
       if length p = 2 andalso exists (eq opr) ["+", "*", "-"] then
-        str_to_operator opr (map (eval vars) p)
+        strToOperator opr (map (eval vars) p)
       else if opr = "/" then
         let val (a::b::_) = p in (eval vars a) div (eval vars b) end
       else if opr = "%" then
@@ -109,7 +95,7 @@ fun eval _ (Constant x) = x
       else raise InvalidExpression e
   | eval vars (e as Operator (opr, (List l))) =
       if exists (eq opr) ["+", "*"] then
-        str_to_operator opr (map (eval vars) l)
+        strToOperator opr (map (eval vars) l)
       else raise InvalidExpression e
   | eval _ e = raise InvalidExpression e
 
@@ -147,11 +133,11 @@ fun distribute_two (Operator (s1, Pair l1)) (Operator (s2, Pair l2)) =
   | distribute_two (c as (Constant _)) (e as (Operator _)) = distribute_two e c
   | distribute_two (x as (Variable _)) (e as (Operator _)) = distribute_two e x
   | distribute_two (Operator (_, List l)) (c as Constant _) =
-      map (operator "*") (cross_lists (vectorize l) (vectorize [c]))
+      map (operator "*") (crossLists (vectorize l) (vectorize [c]))
   | distribute_two (Operator (_, List l)) (x as Variable _) =
-      map (operator "*") (cross_lists (vectorize l) (vectorize [x]))
+      map (operator "*") (crossLists (vectorize l) (vectorize [x]))
   | distribute_two (Operator (_, List l1)) (Operator (_, List l2)) =
-      map (operator "*") (cross_lists (vectorize l1) (vectorize l2))
+      map (operator "*") (crossLists (vectorize l1) (vectorize l2))
 
 fun merge opr (c as Constant _) e = merge opr e c
   | merge opr (x as Variable _) e = merge opr e x
@@ -198,7 +184,7 @@ fun traverse c v t i (Constant x) = c x
   | traverse c v t i (Operator (_, List p)) = foldl t i (map (traverse c v t i) p)
   | traverse _ _ _ _ e = raise InvalidExpression e
 
-val allVars = (traverse (fn _ => []) listify op@ []) o sort_oper
+val allVars = (traverse (fn _ => []) listify op@ []) o sortOper
 fun variablesMatch e1 e2 = allVars e1 = allVars e2
 (* Find the product of constants from the expression or return 1 if none found *)
 val extractConstant = traverse id (fn _ => 1) op* 1
