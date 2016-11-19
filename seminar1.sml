@@ -66,8 +66,9 @@ fun cross (a, b) = foldr (fn (x, xa) => (map (fn y => (x, y)) b)@xa) [] a
  * Combinations of lists
  *)
 
+fun listify x = [x]
 (* Take a list and wrap each element inside another list *)
-fun listify l = map (fn x => [x]) l
+fun vectorize l = map listify l
 
 (* Cartesian product on lists of lists *)
 fun cross_lists a b =
@@ -80,7 +81,7 @@ fun cross_lists_ke x [] = x
   | cross_lists_ke [] y = y
   | cross_lists_ke a b = cross_lists a b
 
-fun combinations ls = foldr (fn (l, la) => cross_lists_ke (listify l) la) [] ls
+fun combinations ls = foldr (fn (l, la) => cross_lists_ke (vectorize l) la) [] ls
 
 (* Naloga 3
  * Evaluate an expression
@@ -146,11 +147,11 @@ fun distribute_two (Operator (s1, Pair l1)) (Operator (s2, Pair l2)) =
   | distribute_two (c as (Constant _)) (e as (Operator _)) = distribute_two e c
   | distribute_two (x as (Variable _)) (e as (Operator _)) = distribute_two e x
   | distribute_two (Operator (_, List l)) (c as Constant _) =
-      map (operator "*") (cross_lists (listify l) (listify [c]))
+      map (operator "*") (cross_lists (vectorize l) (vectorize [c]))
   | distribute_two (Operator (_, List l)) (x as Variable _) =
-      map (operator "*") (cross_lists (listify l) (listify [x]))
+      map (operator "*") (cross_lists (vectorize l) (vectorize [x]))
   | distribute_two (Operator (_, List l1)) (Operator (_, List l2)) =
-      map (operator "*") (cross_lists (listify l1) (listify l2))
+      map (operator "*") (cross_lists (vectorize l1) (vectorize l2))
 
 fun merge opr (c as Constant _) e = merge opr e c
   | merge opr (x as Variable _) e = merge opr e x
@@ -197,16 +198,12 @@ fun traverse c v t i (Constant x) = c x
   | traverse c v t i (Operator (_, List p)) = foldl t i (map (traverse c v t i) p)
   | traverse _ _ _ _ e = raise InvalidExpression e
 
-val allVars = (traverse (fn x => []) (fn x => [x]) (op @) []) o sort_oper
+val allVars = (traverse (fn _ => []) listify op@ []) o sort_oper
 fun variablesMatch e1 e2 = allVars e1 = allVars e2
-val sumConstants = traverse (fn x => x) (fn x => 0) (fn (x, y) => x + y) 0
 (* Find the product of constants from the expression or return 1 if none found *)
 val extractConstant = traverse id (fn _ => 1) op* 1
-val onlyHasConstants = null o (traverse (fn _ => []) (fn x => [x]) (op@)) []
-val onlyHasVars = null o (traverse (fn x => [x]) (fn _ => []) (op@)) []
-
-fun reduceConstants (e as Operator (opr, _)) =
-    operator opr ((Constant (sumConstants e))::(map Variable (allVars e)))
+val onlyHasConstants = null o (traverse (fn _ => []) listify op@ [])
+val onlyHasVars = null o (traverse listify (fn _ => []) op@ [])
 
 (* Merge a constant into an expression list, given a function, if a variable
  * is given, append it to the end of the list since we can't merge them *)
@@ -221,12 +218,6 @@ fun reduceExpr (Operator (opr, (Pair l))) = reduceExpr (Operator (opr, List l))
   | reduceExpr (Operator ("+", (List l))) = operator "+" (foldl (addToExprList op+ ) [] l)
   | reduceExpr (Operator ("-", (List l))) = operator "-" (foldl (addToExprList op- ) [] l)
   | reduceExpr e = e
-
-(* If an operator only contains a single element, it is simpler to simply use
- * that instead of the entire expression e.g. (+ 5) = 5 *)
-fun bringOutSingle (Operator (opr, (Pair l))) = bringOutSingle (Operator (opr, List l))
-  | bringOutSingle (Operator (opr, (List (e::[])))) = e
-  | bringOutSingle e = e
 
 (* Wrap a single element in an operator e.g. x = (+ x) *)
 fun wrapInOperator opr (c as (Constant _)) = operator opr [c]
