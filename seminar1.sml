@@ -126,50 +126,23 @@ fun derivative (Constant _) _ = Constant 0
 (* Naloga 5
  * Flatten an expression as a sum of products
  *)
+fun bringOutList (c as Constant _) = [c]
+  | bringOutList (x as Variable _) = [x]
+  | bringOutList (Operator (_, Pair l)) = l
+  | bringOutList (Operator (_, List l)) = l
+  | bringOutList e = raise InvalidExpression e
 
-(* Simplify the expression using the distribution property *)
-fun distribute_two (Operator (s1, Pair l1)) (Operator (s2, Pair l2)) =
-      distribute_two (Operator (s1, List l1)) (Operator (s2, List l2))
-  | distribute_two (c as (Constant _)) (e as (Operator _)) = distribute_two e c
-  | distribute_two (x as (Variable _)) (e as (Operator _)) = distribute_two e x
-  | distribute_two (Operator (_, List l)) (c as Constant _) =
-      map (operator "*") (crossLists (vectorize l) (vectorize [c]))
-  | distribute_two (Operator (_, List l)) (x as Variable _) =
-      map (operator "*") (crossLists (vectorize l) (vectorize [x]))
-  | distribute_two (Operator (_, List l1)) (Operator (_, List l2)) =
-      map (operator "*") (crossLists (vectorize l1) (vectorize l2))
-
-fun merge opr (c as Constant _) e = merge opr e c
-  | merge opr (x as Variable _) e = merge opr e x
-  (* (1 + 2) + a = 1 + 2 + a *)
-  | merge "+" (Operator ("+", List e)) (c as Constant _) = operator "+" (c::e)
-  | merge "+" (Operator ("+", List e)) (x as Variable _) = operator "+" (x::e)
-  (* (a + b) + (c + d) = a + b + c + d *)
-  | merge "+" (Operator (_, List e1)) (Operator (_, List e2)) =
-      operator "+" (e1@e2)
-  (* (1 * 2) * a = 1 * 2 * a *)
-  | merge "*" (Operator ("*", List e)) (c as Constant _) = operator "*" (c::e)
-  | merge "*" (Operator ("*", List e)) (v as Variable _) = operator "*" (v::e)
-  (* 2 * (x + y) = 2x + 2y *)
-  | merge "*" (e as (Operator ("+", _))) (c as Constant _) =
-      operator "+" (distribute_two c e)
-  (* 2 * (x + y) = 2x + 2y *)
-  | merge "*" (e as (Operator ("+", _))) (x as Variable _) =
-      operator "+" (distribute_two x e)
-  (* (a + b) * (c + d) = ac + ad + bc + bd *)
-  | merge opr (e1 as (Operator ("*", _))) (e2 as (Operator ("*", _))) =
-      operator "+" (distribute_two e1 e2)
-
-fun distribute_two_ke x (Operator (_, Pair [])) = [x]
-  | distribute_two_ke (Operator (_, Pair [])) y = [y]
-  | distribute_two_ke x (Operator (_, List [])) = [x]
-  | distribute_two_ke (Operator (_, List [])) y = [y]
-  | distribute_two_ke x y = distribute_two x y
-
-fun distribute (Operator ("*", List l)) =
-  Operator ("+", List (foldr (fn (x, xa) => (
-    (distribute_two_ke x (Operator ("", List [Constant 5])))@xa
-  )) [] l))
+fun flatten e =
+  let
+    fun flatten' (Operator (opr, Pair l)) = flatten' (Operator (opr, List l))
+      | flatten' (Operator ("+", List l)) = foldl op@ [] (map flatten' l)
+      | flatten' (c as Constant _) = [operator "*" [c]]
+      | flatten' (x as Variable _) = [operator "*" [x]]
+      | flatten' (e as Operator ("*", List l)) = map (operator "*") (combinations (map bringOutList l))
+      | flatten' e = raise InvalidExpression e
+  in
+    operator "+" (flatten' e)
+  end
 
 (* Naloga 6
  * Join similar nodes together
