@@ -168,6 +168,8 @@ fun variablesMatch e1 e2 = allVars e1 = allVars e2
 val extractConstant = traverse id (fn _ => 1) op* 1
 val onlyHasConstants = null o (traverse (fn _ => []) listify op@ [])
 val onlyHasVars = null o (traverse listify (fn _ => []) op@ [])
+val hasConstants = not o onlyHasVars
+val hasVars = not o onlyHasConstants
 
 (* Merge a constant into an expression list, given a function, if a variable
  * is given, append it to the end of the list since we can't merge them *)
@@ -217,22 +219,27 @@ fun isOne (Constant 1) = true | isOne _ = false
 fun isZero (Constant 0) = true | isZero _ = false
 val removeOnes = filter (not o isOne)
 val removeZeros = filter (not o isZero)
-fun reduceMult l = if exists isZero l then [] else l
 (* Try to reduce a list of expressions into a single value, if possible *)
-fun reduceList (Operator (_, List [])) = Constant 0
-  | reduceList (Operator (_, List (x::[]))) = x
-  | reduceList e = e
+fun bringOutDef def (Operator (_, List [])) = Constant def
+  | bringOutDef _ (Operator (_, List (x::[]))) = x
+  | bringOutDef _ e = e
+
+(* Try to evaluate a product to 0 *)
+fun reduceMultExpr (Operator ("*", List l)) =
+  if exists isZero l then
+    Constant 0
+  else operator "*" l
 
 fun removeEmpty (c as Constant _) = c
   | removeEmpty (x as Variable _) = x
   | removeEmpty (Operator (opr, Pair p)) = removeEmpty (Operator (opr, List p))
-  | removeEmpty (Operator ("*", List l)) =
-      reduceList (operator "*" ((reduceMult o removeOnes) (map removeEmpty l)))
-  | removeEmpty (Operator ("/", List l)) = operator "/" (dropWhileR isOne l)
   | removeEmpty (Operator ("+", List l)) =
-      reduceList (operator "+" (removeZeros (map removeEmpty l)))
-  | removeEmpty (Operator ("-", List l)) =
-      reduceList (operator "-" (removeZeros (map removeEmpty l)))
+      bringOutDef 0 (operator "+" (removeZeros (map removeEmpty l)))
+  | removeEmpty (Operator ("-", List (x::xs))) =
+      bringOutDef 0 (Operator ("-", List (x::(removeZeros (map removeEmpty xs)))))
+  | removeEmpty (Operator ("*", List l)) =
+      bringOutDef 1 ((reduceMultExpr o operator "*") (removeOnes (map removeEmpty l)))
+  | removeEmpty (Operator ("/", List l)) = bringOutDef 1 (Operator ("/", List (removeOnes l)))
   | removeEmpty e = raise InvalidExpression e
 
 (* Naloga 8
@@ -245,5 +252,4 @@ fun simplify e =
   in
     (bringOutSingle o simplify') ((joinSimilar o removeEmpty o flatten) e)
   end
-
 
