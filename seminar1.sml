@@ -37,8 +37,7 @@ fun ltExpr (Constant x) (Constant y) = x < y
 fun gteExpr x y = not (ltExpr x y)
 
 fun sortExpr [] = []
-  | sortExpr (x::xs) =
-    (sortExpr (filter (gteExpr x) xs))@[x]@(sortExpr (filter (ltExpr x) xs))
+  | sortExpr (x::xs) = (sortExpr (filter (gteExpr x) xs))@[x]@(sortExpr (filter (ltExpr x) xs))
 
 (* This can only be used with commutative operations due to sorting *)
 fun operator s exp = Operator (s, List (sortExpr exp))
@@ -48,6 +47,11 @@ fun sortOper (Operator (opr, List l)) = operator opr (sortExpr l)
   | sortOper (c as Constant _) = c
   | sortOper (x as Variable _) = x
   | sortOper e = raise InvalidExpression e
+
+(* Wrap a single element in an operator e.g. x = (+ x) *)
+fun wrapInOperator opr (c as Constant _) = operator opr [c]
+  | wrapInOperator opr (x as Variable _) = operator opr [x]
+  | wrapInOperator _ e = e
 
 (* Naloga 1
  * Cartesian product that returns a list of tuples
@@ -126,31 +130,27 @@ fun derivative (Constant _) _ = Constant 0
 (* Naloga 5
  * Flatten an expression as a sum of products
  *)
+(* Extract the expression list from a given expression *)
 fun bringOutList (c as Constant _) = [c]
   | bringOutList (x as Variable _) = [x]
   | bringOutList (Operator (_, Pair l)) = l
   | bringOutList (Operator (_, List l)) = l
   | bringOutList e = raise InvalidExpression e
 
-fun flatten e =
-  let
-    fun flatten' (Operator (opr, Pair l)) = flatten' (Operator (opr, List l))
-      | flatten' (Operator ("+", List l)) = foldl op@ [] (map flatten' l)
-      | flatten' (c as Constant _) = [operator "*" [c]]
-      | flatten' (x as Variable _) = [operator "*" [x]]
-      | flatten' (e as Operator ("*", List l)) = map (operator "*") (combinations (map bringOutList l))
-      | flatten' e = raise InvalidExpression e
-  in
-    operator "+" (flatten' e)
-  end
+fun flatten' (c as Constant _) = [c]
+  | flatten' (x as Variable _) = [x]
+  | flatten' (Operator (opr, Pair l)) = flatten' (Operator (opr, List l))
+  | flatten' (Operator ("+", List l)) = foldl op@ [] (map flatten' l)
+  | flatten' (e as Operator ("*", List l)) = map (operator "*") (combinations (map flatten' l))
+  | flatten' e = raise InvalidExpression e
+
+fun flatten e = operator "+" ((map (wrapInOperator "*") o flatten') e)
 
 (* Naloga 6
  * Join similar nodes together
  *)
 
-(* First function on constants, second on variables, third how to merge them,
- * fourth initial value
- *)
+(* Transform constants -> transform variables -> merge transformed -> initial *)
 fun traverse c v t i (Constant x) = c x
   | traverse c v t i (Variable x) = v x
   | traverse c v t i (Operator (_, Pair p)) = foldl t i (map (traverse c v t i) p)
@@ -177,11 +177,6 @@ fun reduceExpr (Operator (opr, Pair l)) = reduceExpr (Operator (opr, List l))
   | reduceExpr (Operator ("+", List l)) = operator "+" (foldl (addToExprList op+ ) [] l)
   | reduceExpr (Operator ("-", List l)) = operator "-" (foldl (addToExprList op- ) [] l)
   | reduceExpr e = e
-
-(* Wrap a single element in an operator e.g. x = (+ x) *)
-fun wrapInOperator opr (c as Constant _) = operator opr [c]
-  | wrapInOperator opr (x as Variable _) = operator opr [x]
-  | wrapInOperator _ e = e
 
 (* Add any expression to another expression, assume multiplication *)
 fun addToExpr (e, a) =
