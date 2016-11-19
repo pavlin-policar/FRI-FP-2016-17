@@ -48,10 +48,21 @@ fun sortOper (Operator (opr, List l)) = operator opr (sortExpr l)
   | sortOper (x as Variable _) = x
   | sortOper e = raise InvalidExpression e
 
+(* Convert a List into a Pair chain *)
+fun pairify (Operator (opr, List (x1::x2::[]))) = Operator (opr, Pair [x1, x2])
+  | pairify (Operator (opr, List (x1::x2::xs))) =
+      Operator (opr, Pair [x1, pairify (Operator (opr, List (x2::xs)))])
+  | pairify e = raise InvalidExpression e
+
 (* Wrap a single element in an operator e.g. x = (+ x) *)
 fun wrapInOperator opr (c as Constant _) = operator opr [c]
   | wrapInOperator opr (x as Variable _) = operator opr [x]
   | wrapInOperator _ e = e
+
+(* If the operator contains a single operand, we can skip the operator *)
+fun bringOutSingle (Operator (s, Pair p)) = bringOutSingle (Operator (s, List p))
+  | bringOutSingle (Operator (s, List (x::[]))) = x
+  | bringOutSingle e = e
 
 (* Naloga 1
  * Cartesian product that returns a list of tuples
@@ -108,6 +119,7 @@ fun eval _ (Constant x) = x
  *)
 fun derivative (Constant _) _ = Constant 0
   | derivative (Variable x) d = Constant (if x = d then 1 else 0)
+  | derivative (e as Operator (opr, l as List _)) d = derivative (pairify e) d
   | derivative (Operator ("+", Pair (x::y::_))) d =
       Operator ("+", Pair [derivative x d, derivative y d])
   | derivative (Operator ("-", Pair (x::y::_))) d =
@@ -130,13 +142,6 @@ fun derivative (Constant _) _ = Constant 0
 (* Naloga 5
  * Flatten an expression as a sum of products
  *)
-(* Extract the expression list from a given expression *)
-fun bringOutList (c as Constant _) = [c]
-  | bringOutList (x as Variable _) = [x]
-  | bringOutList (Operator (_, Pair l)) = l
-  | bringOutList (Operator (_, List l)) = l
-  | bringOutList e = raise InvalidExpression e
-
 fun flatten' (c as Constant _) = [c]
   | flatten' (x as Variable _) = [x]
   | flatten' (Operator (opr, Pair l)) = flatten' (Operator (opr, List l))
@@ -229,4 +234,16 @@ fun removeEmpty (c as Constant _) = c
   | removeEmpty (Operator ("-", List l)) =
       reduceList (operator "-" (removeZeros (map removeEmpty l)))
   | removeEmpty e = raise InvalidExpression e
+
+(* Naloga 8
+ * Simplify an expression to the smallest number of operantors
+ *)
+fun simplify e =
+  let
+    fun simplify' (Operator (opr, List l)) = operator opr (map bringOutSingle l)
+      | simplify' e = e
+  in
+    (bringOutSingle o simplify') ((joinSimilar o removeEmpty o flatten) e)
+  end
+
 
