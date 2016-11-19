@@ -199,38 +199,66 @@ fun traverse c v t i (Constant x) = c x
 
 val allVars = (traverse (fn x => []) (fn x => [x]) (op @) []) o sort_oper
 fun variablesMatch e1 e2 = allVars e1 = allVars e2
+val sumConstants = traverse (fn x => x) (fn x => 0) (fn (x, y) => x + y) 0
+(* Find the product of constants from the expression or return 1 if none found *)
+val extractConstant = traverse id (fn _ => 1) op* 1
+val onlyHasConstants = null o (traverse (fn _ => []) (fn x => [x]) (op@)) []
+val onlyHasVars = null o (traverse (fn x => [x]) (fn _ => []) (op@)) []
 
-(* Find the first const in an expression or return 1 *)
-fun const (Operator (_, List l)) =
+fun reduceConstants (e as Operator (opr, _)) =
+    operator opr ((Constant (sumConstants e))::(map Variable (allVars e)))
+
+(* Merge a constant into an expression list, given a function, if a variable
+ * is given, append it to the end of the list since we can't merge them *)
+fun addToExprList f (e, []) = [e]
+  | addToExprList f ((Constant x), ((Constant y)::ys)) = (Constant (f (x, y)))::ys
+  | addToExprList f (e, (y::ys)) = y::(addToExprList f (e, ys))
+
+(* Reduce an expression into its simplest form, this only works on one level of
+ * expressions, e.g. 2+2+x+3 = 7+x *)
+fun reduceExpr (Operator (opr, (Pair l))) = reduceExpr (Operator (opr, List l))
+  | reduceExpr (Operator ("*", (List l))) = operator "*" (foldl (addToExprList op* ) [] l)
+  | reduceExpr (Operator ("+", (List l))) = operator "+" (foldl (addToExprList op+ ) [] l)
+  | reduceExpr (Operator ("-", (List l))) = operator "-" (foldl (addToExprList op- ) [] l)
+  | reduceExpr e = e
+
+(* If an operator only contains a single element, it is simpler to simply use
+ * that instead of the entire expression e.g. (+ 5) = 5 *)
+fun bringOutSingle (Operator (opr, (Pair l))) = bringOutSingle (Operator (opr, List l))
+  | bringOutSingle (Operator (opr, (List (e::[])))) = e
+  | bringOutSingle e = e
+
+(* Wrap a single element in an operator e.g. x = (+ x) *)
+fun wrapInOperator opr (c as (Constant _)) = operator opr [c]
+  | wrapInOperator opr (x as (Variable _)) = operator opr [x]
+  | wrapInOperator _ e = e
+
+(* Add any expression to another expression, assume multiplication *)
+fun addToExpr (e, a) =
   let
-    fun mapConst (Constant x) = x | mapConst _ = 0
+    fun addToExpr' (e, (Operator (_, (List [])))) = [e]
+      | addToExpr' (e, (Operator (opr, (List ((x as (Operator (_, (List l))))::xs))))) =
+          if variablesMatch e x then
+            let
+              (* add 5 3 = 15 vs add 2x 5x = 7x *)
+              val combineFunc = if onlyHasConstants e then op* else op+
+              val add = addToExprList combineFunc
+              (* If the expression contains vars, figure out the k, if not, be c *)
+              val c = Constant ((extractConstant o reduceExpr) e)
+              (* If x constins only variables, stick a C1 to add properly *)
+              val ls = if onlyHasVars x then add (Constant 1, l) else l
+            in
+              (operator "*" (add (c, ls)))::xs
+            end
+          else x::(addToExpr' (e, (Operator (opr, List xs))))
   in
-    Constant (foldl (op+) 0 (map mapConst l))
+    operator "+" (addToExpr' (e, a))
   end
-  | const _ = Constant 1
 
-(* Add an together two expressions if they match e.g. x*x to x*x = 2*x*x *)
-fun addToExpr (e, (Operator (_, List []))) = operator "*" [e]
-  | addToExpr (e, (Operator (opr, List (x::xs)))) =
-      if variablesMatch e x then
-        let
-          fun addToConstant (c as Constant _) [] = [c]
-            | addToConstant (Constant c) ((Constant y)::ys) = Constant (c + y)::ys
-            | addToConstant c (y::ys) = y::(addToConstant c ys)
-          fun reduce (Operator (_, List xl)) = addToConstant (const e) xl
-            | reduce e = [e]
-        in
-          operator opr [operator "*" (reduce x)]
-        end
-      else
-        let
-          val Operator (_,  List reduced) = addToExpr (e, operator opr xs)
-        in
-          operator opr (x::reduced)
-        end
-  | addToExpr (e, e1) = raise InvalidExpression e
-
-fun joinSimilar (Operator (_, List l)) = foldl addToExpr (operator "+" []) l
+fun joinSimilar (Operator (opr, (Pair l))) = joinSimilar (Operator (opr, List l))
+  | joinSimilar (Operator ("+", (List l))) =
+      foldl addToExpr (operator "+" []) (map (reduceExpr o (wrapInOperator "*")) l)
+  | joinSimilar e = raise InvalidExpression e
 
 (* Naloga 7
  * Remove empty nodes from the equation
@@ -256,15 +284,4 @@ fun removeEmpty (c as Constant _) = c
   | removeEmpty (Operator ("-", List l)) =
       reduceList (operator "-" (removeZeros (map removeEmpty l)))
   | removeEmpty e = raise InvalidExpression e
-
-
-val test_m1 = merge "+"
-  (Variable "x")
-  (Operator ("+", List [Variable "c", Constant 2]))
-val test_m2 = merge "*"
-  (Variable "x")
-  (Operator ("*", List [Variable "c", Constant 2]))
-val test_m3 = merge "*"
-  (Constant 2)
-  (Operator ("+", List [Variable "x", Variable "y"]))
 
