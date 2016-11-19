@@ -142,11 +142,19 @@ fun derivative (Constant _) _ = Constant 0
 (* Naloga 5
  * Flatten an expression as a sum of products
  *)
+fun flattenProduct [] = []
+  | flattenProduct ((c as Constant _)::xs) = c::(flattenProduct xs)
+  | flattenProduct ((x as Variable _)::xs) = x::(flattenProduct xs)
+  | flattenProduct ((Operator ("*", List l))::xs) = (flattenProduct l)@(flattenProduct xs)
+  | flattenProduct l = l
+
 fun flatten' (c as Constant _) = [c]
   | flatten' (x as Variable _) = [x]
   | flatten' (Operator (opr, Pair l)) = flatten' (Operator (opr, List l))
   | flatten' (Operator ("+", List l)) = foldl op@ [] (map flatten' l)
-  | flatten' (e as Operator ("*", List l)) = map (operator "*") (combinations (map flatten' l))
+  | flatten' (e as Operator ("*", List l)) =
+      (*map (operator "*") (combinations (map flatten' l))*)
+      (map (operator "*") (map flattenProduct (combinations (map flatten' l))))
   | flatten' e = raise InvalidExpression e
 
 fun flatten e = operator "+" ((map (wrapInOperator "*") o flatten') e)
