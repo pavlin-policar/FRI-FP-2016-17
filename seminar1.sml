@@ -27,24 +27,24 @@ fun dropWhile _ [] = []
 fun dropWhileR f = rev o (dropWhile f) o rev
 
 (* Sorting the expression term order *)
-fun lt_expr (Constant x) (Constant y) = x < y
-  | lt_expr (Constant _) _ = true
-  | lt_expr _ (Constant _) = false
-  | lt_expr (Variable x) (Variable y) = x < y
-  | lt_expr (Variable _) _ = true
-  | lt_expr _ (Variable _) = false
-  | lt_expr _ _ = true
-fun gte_expr x y = not (lt_expr x y)
+fun ltExpr (Constant x) (Constant y) = x < y
+  | ltExpr (Constant _) _ = true
+  | ltExpr _ (Constant _) = false
+  | ltExpr (Variable x) (Variable y) = x < y
+  | ltExpr (Variable _) _ = true
+  | ltExpr _ (Variable _) = false
+  | ltExpr _ _ = true
+fun gteExpr x y = not (ltExpr x y)
 
-fun sort_expr [] = []
-  | sort_expr (x::xs) =
-    (sort_expr (filter (gte_expr x) xs))@[x]@(sort_expr (filter (lt_expr x) xs))
+fun sortExpr [] = []
+  | sortExpr (x::xs) =
+    (sortExpr (filter (gteExpr x) xs))@[x]@(sortExpr (filter (ltExpr x) xs))
 
 (* This can only be used with commutative operations due to sorting *)
-fun operator s exp = Operator (s, List (sort_expr exp))
+fun operator s exp = Operator (s, List (sortExpr exp))
 
-fun sortOper (Operator (opr, List l)) = operator opr (sort_expr l)
-  | sortOper (Operator (opr, Pair l)) = operator opr (sort_expr l)
+fun sortOper (Operator (opr, List l)) = operator opr (sortExpr l)
+  | sortOper (Operator (opr, Pair l)) = operator opr (sortExpr l)
   | sortOper (c as Constant _) = c
   | sortOper (x as Variable _) = x
   | sortOper e = raise InvalidExpression e
@@ -72,20 +72,20 @@ fun combinations ls = foldr (fn (l, la) => crossListsKE (vectorize l) la) [] ls
 (* Naloga 3
  * Evaluate an expression
  *)
-exception InvalidOperator
+exception InvalidOperator of string
 fun strToOperator opr =
   case opr of
        "+" => foldl op+ 0
      | "*" => foldl op* 1
      | "-" => foldl op- 0
-     | _ => raise InvalidOperator
+     | s => raise InvalidOperator s
 
 (* Evalue an expression given variables to use *)
 fun eval _ (Constant x) = x
   | eval [] (Variable name) = raise InvalidVariable name
   | eval ((vname, value)::xs) (var as Variable name) =
       if vname = name then value else eval xs var
-  | eval vars (e as Operator (opr, (Pair p))) =
+  | eval vars (e as Operator (opr, Pair p)) =
       if length p = 2 andalso exists (eq opr) ["+", "*", "-"] then
         strToOperator opr (map (eval vars) p)
       else if opr = "/" then
@@ -93,7 +93,7 @@ fun eval _ (Constant x) = x
       else if opr = "%" then
         let val (a::b::_) = p in (eval vars a) mod (eval vars b) end
       else raise InvalidExpression e
-  | eval vars (e as Operator (opr, (List l))) =
+  | eval vars (e as Operator (opr, List l)) =
       if exists (eq opr) ["+", "*"] then
         strToOperator opr (map (eval vars) l)
       else raise InvalidExpression e
@@ -104,16 +104,16 @@ fun eval _ (Constant x) = x
  *)
 fun derivative (Constant _) _ = Constant 0
   | derivative (Variable x) d = Constant (if x = d then 1 else 0)
-  | derivative (Operator ("+", (Pair (x::y::_)))) d =
+  | derivative (Operator ("+", Pair (x::y::_))) d =
       Operator ("+", Pair [derivative x d, derivative y d])
-  | derivative (Operator ("-", (Pair (x::y::_)))) d =
+  | derivative (Operator ("-", Pair (x::y::_))) d =
       Operator ("-", Pair [derivative x d, derivative y d])
-  | derivative (Operator ("*", (Pair (x::y::_)))) d =
+  | derivative (Operator ("*", Pair (x::y::_))) d =
       Operator ("+", Pair [
         Operator ("*", Pair [derivative x d, y]),
         Operator ("*", Pair [derivative y d, x])
       ])
-  | derivative (Operator ("/", (Pair (x::y::_)))) d =
+  | derivative (Operator ("/", Pair (x::y::_))) d =
       Operator ("/", Pair [
         Operator ("-", Pair [
           Operator ("*", Pair [derivative x d, y]),
@@ -167,27 +167,27 @@ val onlyHasVars = null o (traverse listify (fn _ => []) op@ [])
 (* Merge a constant into an expression list, given a function, if a variable
  * is given, append it to the end of the list since we can't merge them *)
 fun addToExprList f (e, []) = [e]
-  | addToExprList f ((Constant x), ((Constant y)::ys)) = (Constant (f (x, y)))::ys
-  | addToExprList f (e, (y::ys)) = y::(addToExprList f (e, ys))
+  | addToExprList f (Constant x, (Constant y)::ys) = (Constant (f (x, y)))::ys
+  | addToExprList f (e, y::ys) = y::(addToExprList f (e, ys))
 
 (* Reduce an expression into its simplest form, this only works on one level of
  * expressions, e.g. 2+2+x+3 = 7+x *)
-fun reduceExpr (Operator (opr, (Pair l))) = reduceExpr (Operator (opr, List l))
-  | reduceExpr (Operator ("*", (List l))) = operator "*" (foldl (addToExprList op* ) [] l)
-  | reduceExpr (Operator ("+", (List l))) = operator "+" (foldl (addToExprList op+ ) [] l)
-  | reduceExpr (Operator ("-", (List l))) = operator "-" (foldl (addToExprList op- ) [] l)
+fun reduceExpr (Operator (opr, Pair l)) = reduceExpr (Operator (opr, List l))
+  | reduceExpr (Operator ("*", List l)) = operator "*" (foldl (addToExprList op* ) [] l)
+  | reduceExpr (Operator ("+", List l)) = operator "+" (foldl (addToExprList op+ ) [] l)
+  | reduceExpr (Operator ("-", List l)) = operator "-" (foldl (addToExprList op- ) [] l)
   | reduceExpr e = e
 
 (* Wrap a single element in an operator e.g. x = (+ x) *)
-fun wrapInOperator opr (c as (Constant _)) = operator opr [c]
-  | wrapInOperator opr (x as (Variable _)) = operator opr [x]
+fun wrapInOperator opr (c as Constant _) = operator opr [c]
+  | wrapInOperator opr (x as Variable _) = operator opr [x]
   | wrapInOperator _ e = e
 
 (* Add any expression to another expression, assume multiplication *)
 fun addToExpr (e, a) =
   let
-    fun addToExpr' (e, (Operator (_, (List [])))) = [e]
-      | addToExpr' (e, (Operator (opr, (List ((x as (Operator (_, (List l))))::xs))))) =
+    fun addToExpr' (e, Operator (_, List [])) = [e]
+      | addToExpr' (e, Operator (opr, List ((x as Operator (_, List l))::xs))) =
           if variablesMatch e x then
             let
               (* add 5 3 = 15 vs add 2x 5x = 7x *)
@@ -200,13 +200,13 @@ fun addToExpr (e, a) =
             in
               (operator "*" (add (c, ls)))::xs
             end
-          else x::(addToExpr' (e, (Operator (opr, List xs))))
+          else x::(addToExpr' (e, Operator (opr, List xs)))
   in
     operator "+" (addToExpr' (e, a))
   end
 
-fun joinSimilar (Operator (opr, (Pair l))) = joinSimilar (Operator (opr, List l))
-  | joinSimilar (Operator ("+", (List l))) =
+fun joinSimilar (Operator (opr, Pair l)) = joinSimilar (Operator (opr, List l))
+  | joinSimilar (Operator ("+", List l)) =
       foldl addToExpr (operator "+" []) (map (reduceExpr o (wrapInOperator "*")) l)
   | joinSimilar e = raise InvalidExpression e
 
