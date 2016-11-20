@@ -171,23 +171,29 @@ fun traverse c v t i (Constant x) = c x
 
 val allVars = (traverse (fn _ => []) listify op@ []) o sortOper
 fun variablesMatch e1 e2 = allVars e1 = allVars e2
-(* Find the product of constants from the expression or return 1 if none found *)
-val extractConstant = traverse id (fn _ => 1) op* 1
+val prodConstants = traverse id (fn _ => 1) op* 1
 
+(* Reduce a single multiplication expression by multiplying constants *)
+fun reduceSingle (e as Operator ("*", _)) =
+      operator "*" ((Constant (prodConstants e))::(map Variable (allVars e)))
+  | reduceSingle e = raise InvalidExpression e
 
-fun addToExpr (e, (Operator ("+", List []))) = [e]
+(* Add an expression into an expression of sum of products *)
+fun addToExpr (e, (Operator ("+", List []))) = [reduceSingle e]
   | addToExpr (e, (Operator ("+", List (x::xs)))) =
       if variablesMatch e x then
         let
-          val sumConstants = op+ (extractConstant e, extractConstant x)
+          val sumConstants = op+ (prodConstants e, prodConstants x)
           val c = if sumConstants = 1 then [] else [Constant sumConstants]
         in
-          (Operator ("+", List (c@(map Variable (allVars e)))))::xs
+          (Operator ("*", List (c@(map Variable (allVars e)))))::xs
         end
       else x::(addToExpr (e, Operator ("+", List xs)))
+  | addToExpr (e1, e2) = raise InvalidExpression (operator "?" [e1, e2])
 
 fun joinSimilar (Operator ("+", List l)) =
-  foldl (operator "+" o addToExpr) (operator "+" []) (map (wrapInOperator "*") l)
+      foldl (operator "+" o addToExpr) (operator "+" []) (map (wrapInOperator "*") l)
+  | joinSimilar e = raise InvalidExpression e
 
 (* Naloga 7
  * Remove empty nodes from the equation
@@ -202,10 +208,8 @@ fun bringOutDef def (Operator (_, List [])) = Constant def
   | bringOutDef _ e = e
 
 (* Try to evaluate a product to 0 *)
-fun reduceMultExpr (Operator ("*", List l)) =
-  if exists isZero l then
-    Constant 0
-  else operator "*" l
+fun reduceMultExpr (Operator ("*", List l)) = if exists isZero l then Constant 0 else operator "*" l
+  | reduceMultExpr e = raise InvalidExpression e
 
 fun removeEmpty (c as Constant _) = c
   | removeEmpty (x as Variable _) = x
