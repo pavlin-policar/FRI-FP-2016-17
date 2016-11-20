@@ -253,13 +253,13 @@ fun zipTwo x y = ListPair.zip(x, y)
 (* Take a list of (exp, patt) and check that everything matches *)
 fun checkMatch [] = SOME []
   | checkMatch ((x, p)::xs) =
-  let
-    val (thisMatch, restMatches) = (match (x, p), checkMatch xs)
-  in
-    if isSome thisMatch andalso isSome restMatches then
-      SOME ((valOf thisMatch)@(valOf restMatches))
-    else NONE
-  end
+      let
+        val (thisMatch, restMatches) = (match (x, p), checkMatch xs)
+      in
+        if isSome thisMatch andalso isSome restMatches then
+          SOME ((valOf thisMatch)@(valOf restMatches))
+        else NONE
+      end
 (* Check a list of matches and return the first match *)
 and extractMatch [] = NONE
   | extractMatch (x::xs) = if isSome x then x else extractMatch xs
