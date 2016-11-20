@@ -254,7 +254,7 @@ fun zipTwo x y = ListPair.zip(x, y)
 fun checkMatch [] = SOME []
   | checkMatch ((x, p)::xs) =
   let
-    val (thisMatch, restMatches) = (checkMatch xs, match (x, p))
+    val (thisMatch, restMatches) = (match (x, p), checkMatch xs)
   in
     if isSome thisMatch andalso isSome restMatches then
       SOME ((valOf thisMatch)@(valOf restMatches))
