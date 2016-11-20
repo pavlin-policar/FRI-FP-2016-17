@@ -239,9 +239,6 @@ datatype pattern = ConstantP of int
                  | VariableP of string
                  | Wildcard
 
-exception InvalidExpression of expression
-exception InvalidVariable of string
-
 fun interleave xs x [] = [xs@[x]]
   | interleave xs x (y::ys) = (xs@(x::y::ys))::(interleave (xs@[y]) x ys)
 
@@ -266,8 +263,14 @@ and extractMatch [] = NONE
 and match (_, Wildcard) = SOME []
   | match (x, VariableP p) = SOME [(p, x)]
   | match (Constant x, ConstantP p) = if x = p then SOME [] else NONE
-  | match (Pair xs, PairP ps) = checkMatch (zipTwo xs ps)
-  | match (List xs, ListP ps) = extractMatch (map checkMatch (map (zipTwo xs) (permutations ps)))
+  | match (Pair xs, PairP ps) =
+      if length xs = 2 andalso length ps = 2 then
+        checkMatch (zipTwo xs ps)
+      else NONE
+  | match (List xs, ListP ps) =
+      if length xs = length ps then
+        extractMatch (map checkMatch (map (zipTwo xs) (permutations ps)))
+      else NONE
   | match (Operator (s, l), OperatorP (ps, pl)) = if s = ps then match (l, pl) else NONE
   | match (_, _) = NONE
 
