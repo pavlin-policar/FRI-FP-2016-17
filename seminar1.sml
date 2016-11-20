@@ -22,10 +22,6 @@ fun vectorize l = map listify l
 val exists = List.exists
 val filter = List.filter
 
-fun dropWhile _ [] = []
-  | dropWhile f (x::xs) = if f x then dropWhile f xs else x::xs
-fun dropWhileR f = rev o (dropWhile f) o rev
-
 (* Sorting the expression term order *)
 fun ltExpr (Constant x) (Constant y) = x < y
   | ltExpr (Constant _) _ = true
@@ -74,8 +70,7 @@ fun cross (a, b) = foldr (fn (x, xa) => (map (fn y => [x, y]) b)@xa) [] a
  * Combinations of lists
  *)
 (* Cartesian product on lists of lists *)
-fun crossLists a b =
-  foldr (fn (x, xa) => (foldr (fn (y, ya) => (x@y)::ya) [] b)@xa) [] a
+fun crossLists a b = foldr (fn (x, xa) => (foldr (fn (y, ya) => (x@y)::ya) [] b)@xa) [] a
 
 (* Cartesian product on lists of lists. If one is empty, return other one *)
 fun crossListsKE x [] = x
@@ -233,3 +228,46 @@ fun simplify e =
   in
     (bringOutSingle o simplify') ((joinSimilar o removeEmpty o flatten) e)
   end
+
+(* Naloga 9
+ * Match an expression with a given pattern
+ *)
+datatype pattern = ConstantP of int
+                 | ListP of pattern list
+                 | OperatorP of string * pattern
+                 | PairP of pattern list
+                 | VariableP of string
+                 | Wildcard
+
+exception InvalidExpression of expression
+exception InvalidVariable of string
+
+fun interleave xs x [] = [xs@[x]]
+  | interleave xs x (y::ys) = (xs@(x::y::ys))::(interleave (xs@[y]) x ys)
+
+fun permutations [] = [[]]
+  | permutations (x::xs) = foldr op@ [] (map (interleave [] x) (permutations xs))
+
+fun zipTwo x y = ListPair.zip(x, y)
+
+(* Take a list of (exp, patt) and check that everything matches *)
+fun checkMatch [] = SOME []
+  | checkMatch ((x, p)::xs) =
+  let
+    val (thisMatch, restMatches) = (checkMatch xs, match (x, p))
+  in
+    if isSome thisMatch andalso isSome restMatches then
+      SOME ((valOf thisMatch)@(valOf restMatches))
+    else NONE
+  end
+(* Check a list of matches and return the first match *)
+and extractMatch [] = NONE
+  | extractMatch (x::xs) = if isSome x then x else extractMatch xs
+and match (_, Wildcard) = SOME []
+  | match (x, VariableP p) = SOME [(p, x)]
+  | match (Constant x, ConstantP p) = if x = p then SOME [] else NONE
+  | match (Pair xs, PairP ps) = checkMatch (zipTwo xs ps)
+  | match (List xs, ListP ps) = extractMatch (map checkMatch (map (zipTwo xs) (permutations ps)))
+  | match (Operator (s, l), OperatorP (ps, pl)) = if s = ps then match (l, pl) else NONE
+  | match (_, _) = NONE
+
