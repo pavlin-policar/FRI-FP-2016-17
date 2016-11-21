@@ -62,9 +62,9 @@ fun bringOutSingle (Operator (s, Pair p)) = bringOutSingle (Operator (s, List p)
 
 (* Naloga 1
  * Cartesian product that returns a list of tuples
- * e.g. cross([1,2], [3,4]) = [[1,3],[2,3],[1,4],[2,4]]
+ * e.g. cross([1,2], [3,4]) = [(1,3),(2,3),(1,4),(2,4)]
  *)
-fun cross (a, b) = foldr (fn (x, xa) => (map (fn y => [x, y]) b)@xa) [] a
+fun cross (a, b) = foldr (fn (x, xa) => (map (fn y => (x, y)) b)@xa) [] a
 
 (* Naloga 2
  * Combinations of lists
