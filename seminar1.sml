@@ -196,7 +196,7 @@ fun addToExpr (e, (Operator ("+", List []))) = [reduceSingle e]
 
 fun joinSimilar (Operator ("+", List l)) =
       foldl (operator "+" o addToExpr) (operator "+" []) (map (wrapInOperator "*") l)
-  | joinSimilar e = raise InvalidExpression e
+  | joinSimilar e = e
 
 (* Naloga 7
  * Remove empty nodes from the equation
@@ -242,7 +242,7 @@ fun simplify (c as Constant _) = c
   let
     fun simplify' (Operator (opr, List l)) = operator opr (map bringOutSingle l)
       | simplify' e = e
-    val simplified = (bringOutSingle o simplify') ((joinSimilar o removeEmpty o flatten) e)
+    val simplified = (bringOutSingle o simplify' o joinSimilar o removeEmpty o flatten) e
   in
     if numOperators simplified < numOperators e then
       simplified
