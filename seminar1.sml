@@ -87,7 +87,6 @@ fun strToOperator opr =
   case opr of
        "+" => foldl op+ 0
      | "*" => foldl op* 1
-     | "-" => foldl op- 0
      | s => raise InvalidOperator s
 
 (* Evalue an expression given variables to use *)
@@ -96,10 +95,19 @@ fun eval _ (Constant x) = x
   | eval ((vname, value)::xs) (var as Variable name) =
       if vname = name then value else eval xs var
   | eval vars (e as Operator (opr, Pair p)) =
-      if length p = 2 andalso exists (eq opr) ["+", "*", "-"] then
+      if length p = 2 andalso exists (eq opr) ["+", "*"] then
         strToOperator opr (map (eval vars) p)
+      else if opr = "-" then
+        let val (a::b::_) = p in (eval vars a) - (eval vars b) end
       else if opr = "/" then
-        let val (a::b::_) = p in (eval vars a) div (eval vars b) end
+        let
+          val (a::b::_) = p
+          val denominator = eval vars b
+        in
+          if denominator <> 0 then
+            (eval vars a) div denominator
+          else raise InvalidExpression e
+        end
       else if opr = "%" then
         let val (a::b::_) = p in (eval vars a) mod (eval vars b) end
       else raise InvalidExpression e
