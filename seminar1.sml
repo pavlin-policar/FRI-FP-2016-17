@@ -229,12 +229,24 @@ fun removeEmpty (c as Constant _) = c
 (* Naloga 8
  * Simplify an expression to the smallest number of operantors
  *)
-fun simplify e =
+fun numOperators (Constant _) = 0
+  | numOperators (Variable _) = 0
+  | numOperators (Operator (opr, Pair p)) = numOperators (Operator (opr, List p))
+  | numOperators (Operator (_, List l)) = 1 + (foldl op+ 0 (map numOperators l))
+  | numOperators _ = 0
+
+fun simplify (c as Constant _) = c
+  | simplify (x as Variable _) = x
+  | simplify (e as Operator ("*", _)) = simplify (Operator ("+", List [e]))
+  | simplify e =
   let
     fun simplify' (Operator (opr, List l)) = operator opr (map bringOutSingle l)
       | simplify' e = e
+    val simplified = (bringOutSingle o simplify') ((joinSimilar o removeEmpty o flatten) e)
   in
-    (bringOutSingle o simplify') ((joinSimilar o removeEmpty o flatten) e)
+    if numOperators simplified < numOperators e then
+      simplified
+    else bringOutSingle e
   end
 
 (* Naloga 9
