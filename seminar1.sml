@@ -250,10 +250,11 @@ fun simplify (c as Constant _) = c
     fun simplify' (Operator (opr, List l)) = operator opr (map bringOutSingle l)
       | simplify' e = e
     val simplified = (bringOutSingle o simplify' o joinSimilar o removeEmpty o flatten) e
+    val shortened = bringOutSingle e
   in
-    if numOperators simplified < numOperators e then
+    if numOperators simplified < numOperators shortened then
       simplified
-    else bringOutSingle e
+    else shortened
   end
 
 (* Naloga 9
