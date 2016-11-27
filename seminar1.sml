@@ -109,7 +109,14 @@ fun eval _ (Constant x) = x
           else raise InvalidExpression e
         end
       else if opr = "%" then
-        let val (a::b::_) = p in (eval vars a) mod (eval vars b) end
+        let
+          val (a::b::_) = p
+          val denominator = eval vars b
+        in
+          if denominator <> 0 then
+            (eval vars a) mod denominator
+          else raise InvalidExpression e
+        end
       else raise InvalidExpression e
   | eval vars (e as Operator (opr, List l)) =
       if exists (eq opr) ["+", "*"] then
