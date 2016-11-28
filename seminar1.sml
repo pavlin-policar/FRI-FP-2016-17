@@ -169,15 +169,29 @@ fun flattenProduct [] = []
   | flattenProduct ((Operator ("*", List l))::xs) = (flattenProduct l)@(flattenProduct xs)
   | flattenProduct l = l
 
+fun addNegOne (c as Constant _) = Operator ("*", List [Constant ~1, c])
+  | addNegOne (x as Variable _) = Operator ("*", List [Constant ~1, x])
+  | addNegOne (Operator (opr, Pair p)) = addNegOne (Operator (opr, List p))
+  | addNegOne (Operator (opr, List l)) = Operator (opr, List ((Constant ~1)::l))
+  | addNegOne e = raise InvalidExpression e
+
+fun isNegOne (Constant ~1) = true
+  | isNegOne _ = false
+
 fun flatten' (c as Constant _) = [c]
   | flatten' (x as Variable _) = [x]
   | flatten' (Operator (opr, Pair l)) = flatten' (Operator (opr, List l))
   | flatten' (Operator ("+", List l)) = foldl op@ [] (map flatten' l)
+  | flatten' (Operator ("-", List (x::xs))) =
+      filter (not o isNegOne) ((flatten' x)@(foldl op@ [] (map (flatten' o addNegOne) xs)))
   | flatten' (e as Operator ("*", List l)) =
       (map (operator "*") (map flattenProduct (combinations (map flatten' l))))
   | flatten' e = raise InvalidExpression e
 
-fun flatten e = operator "+" ((map (wrapInOperator "*") o flatten') e)
+fun flatten (Operator ("-", Pair p)) = flatten (Operator ("-", List p))
+  | flatten (Operator ("-", List [])) = Constant 0
+  | flatten (Operator ("-", List (x::[]))) = x
+  | flatten e = operator "+" ((map (wrapInOperator "*") o flatten') e)
 
 (* Naloga 6
  * Join similar nodes together
