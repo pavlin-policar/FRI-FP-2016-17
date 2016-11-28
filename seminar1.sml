@@ -246,11 +246,23 @@ fun bringOutDef def (Operator (_, List [])) = Constant def
 fun reduceMultExpr (Operator ("*", List l)) = if exists isZero l then Constant 0 else operator "*" l
   | reduceMultExpr e = raise InvalidExpression e
 
+val onlyConstants = traverse (fn _ => true) (fn _ => false) (fn (x, y) => x andalso y) true
+
+fun addConstants (Constant c, Constant a) = Constant (c + a)
+
 fun removeEmpty (c as Constant _) = c
   | removeEmpty (x as Variable _) = x
   | removeEmpty (Operator (opr, Pair p)) = removeEmpty (Operator (opr, List p))
+  | removeEmpty (Operator ("+", List (x::[]))) = x
   | removeEmpty (Operator ("+", List l)) =
-      bringOutDef 0 (operator "+" (removeZeros (map removeEmpty l)))
+    let
+      val removed = bringOutDef 0 (operator "+" (removeZeros (map removeEmpty l)))
+      val (Operator (_, List l)) = removed
+    in
+      if onlyConstants removed then
+        foldl addConstants (Constant 0) l
+      else removed
+    end
   | removeEmpty (Operator ("-", List (x::xs))) =
       bringOutDef 0 (Operator ("-", List (x::(removeZeros (map removeEmpty xs)))))
   | removeEmpty (Operator ("*", List l)) =
