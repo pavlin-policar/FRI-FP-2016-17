@@ -19,6 +19,9 @@ fun id x = x
 fun listify x = [x]
 fun vectorize l = map listify l
 
+fun gcd (a, 0) = a
+  | gcd (a, b) = gcd (b, (a mod b))
+
 val exists = List.exists
 val filter = List.filter
 
@@ -117,10 +120,18 @@ fun eval _ (Constant x) = x
             (eval vars a) mod denominator
           else raise InvalidExpression e
         end
+      else if opr = "gcd" then
+        eval vars (Operator ("gcd", List p))
       else raise InvalidExpression e
   | eval vars (e as Operator (opr, List l)) =
       if exists (eq opr) ["+", "*"] then
         strToOperator opr (map (eval vars) l)
+      else if opr = "gcd" then
+        let
+          val (x::xs) = l
+        in
+          foldl (fn (n, a) => gcd ((eval vars n), a)) (eval vars x) xs
+        end
       else raise InvalidExpression e
   | eval _ e = raise InvalidExpression e
 
