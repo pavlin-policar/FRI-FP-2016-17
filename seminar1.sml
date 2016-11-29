@@ -35,6 +35,7 @@ fun ltExpr (Constant x) (Constant y) = x < y
   | ltExpr _ _ = true
 fun gteExpr x y = not (ltExpr x y)
 
+(* Quicksort the expression to make the expression output more readable *)
 fun sortExpr [] = []
   | sortExpr (x::xs) = (sortExpr (filter (gteExpr x) xs))@[x]@(sortExpr (filter (ltExpr x) xs))
 
@@ -141,16 +142,16 @@ fun eval _ (Constant x) = x
 fun derivative (Constant _) _ = Constant 0
   | derivative (Variable x) d = Constant (if x = d then 1 else 0)
   | derivative (e as Operator (opr, l as List _)) d = derivative (pairify e) d
-  | derivative (Operator ("+", Pair (x::y::_))) d =
+  | derivative (Operator ("+", Pair [x, y])) d =
       Operator ("+", Pair [derivative x d, derivative y d])
-  | derivative (Operator ("-", Pair (x::y::_))) d =
+  | derivative (Operator ("-", Pair [x, y])) d =
       Operator ("-", Pair [derivative x d, derivative y d])
-  | derivative (Operator ("*", Pair (x::y::_))) d =
+  | derivative (Operator ("*", Pair [x, y])) d =
       Operator ("+", Pair [
         Operator ("*", Pair [derivative x d, y]),
         Operator ("*", Pair [derivative y d, x])
       ])
-  | derivative (Operator ("/", Pair (x::y::_))) d =
+  | derivative (Operator ("/", Pair [x, y])) d =
       Operator ("/", Pair [
         Operator ("-", Pair [
           Operator ("*", Pair [derivative x d, y]),
@@ -246,9 +247,11 @@ fun bringOutDef def (Operator (_, List [])) = Constant def
 fun reduceMultExpr (Operator ("*", List l)) = if exists isZero l then Constant 0 else operator "*" l
   | reduceMultExpr e = raise InvalidExpression e
 
+(* Does the expression only contain constants? *)
 val onlyConstants = traverse (fn _ => true) (fn _ => false) (fn (x, y) => x andalso y) true
 
 fun addConstants (Constant c, Constant a) = Constant (c + a)
+  | addConstants (e1, e2) = raise InvalidExpression e1
 
 fun removeEmpty (c as Constant _) = c
   | removeEmpty (x as Variable _) = x
