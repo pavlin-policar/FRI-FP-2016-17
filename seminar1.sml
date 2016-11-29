@@ -87,52 +87,37 @@ fun combinations ls = foldr (fn (l, la) => crossListsKE (vectorize l) la) [] ls
  * Evaluate an expression
  *)
 exception InvalidOperator of string
-fun strToOperator opr =
-  case opr of
-       "+" => foldl op+ 0
-     | "*" => foldl op* 1
-     | s => raise InvalidOperator s
+fun strToOperator "+" = op +
+  | strToOperator "-" = op -
+  | strToOperator "*" = op *
+  | strToOperator "/" = op div
+  | strToOperator "%" = op mod
+  | strToOperator "gcd" = gcd
+  | strToOperator opr = raise InvalidOperator opr
 
 (* Evalue an expression given variables to use *)
 fun eval _ (Constant x) = x
   | eval [] (Variable name) = raise InvalidVariable name
   | eval ((vname, value)::xs) (var as Variable name) =
       if vname = name then value else eval xs var
-  | eval vars (e as Operator (opr, Pair p)) =
-      if length p = 2 andalso exists (eq opr) ["+", "*"] then
-        strToOperator opr (map (eval vars) p)
-      else if opr = "-" then
-        let val (a::b::_) = p in (eval vars a) - (eval vars b) end
-      else if opr = "/" then
-        let
-          val (a::b::_) = p
-          val denominator = eval vars b
-        in
+  | eval vars (e as Operator (opr, Pair (p as [a, b]))) =
+      (* Redirect operations that are supported for lists to lists *)
+      if exists (eq opr) ["+", "*", "gcd"] then
+        eval vars (Operator (opr, List p))
+      (* Operations only supported in the Pair format *)
+      else if exists (eq opr) ["-"] then
+        strToOperator opr ((eval vars a), (eval vars b))
+      (* When checking for division by zero is necessary *)
+      else if exists (eq opr) ["/", "%"] then
+        let val denominator = eval vars b in
           if denominator <> 0 then
-            (eval vars a) div denominator
+            strToOperator opr ((eval vars a), denominator)
           else raise InvalidExpression e
         end
-      else if opr = "%" then
-        let
-          val (a::b::_) = p
-          val denominator = eval vars b
-        in
-          if denominator <> 0 then
-            (eval vars a) mod denominator
-          else raise InvalidExpression e
-        end
-      else if opr = "gcd" then
-        eval vars (Operator ("gcd", List p))
       else raise InvalidExpression e
-  | eval vars (e as Operator (opr, List l)) =
-      if exists (eq opr) ["+", "*"] then
-        strToOperator opr (map (eval vars) l)
-      else if opr = "gcd" then
-        let
-          val (x::xs) = l
-        in
-          foldl (fn (n, a) => gcd ((eval vars n), a)) (eval vars x) xs
-        end
+  | eval vars (e as Operator (opr, List (x::xs))) =
+      if exists (eq opr) ["+", "*", "gcd"] then
+        foldl (fn (n, a) => strToOperator opr ((eval vars n), a)) (eval vars x) xs
       else raise InvalidExpression e
   | eval _ e = raise InvalidExpression e
 
