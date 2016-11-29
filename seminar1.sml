@@ -229,7 +229,7 @@ fun bringOutDef def (Operator (_, List [])) = Constant def
   | bringOutDef _ e = e
 
 (* Try to evaluate a product to 0 *)
-fun reduceMultExpr (Operator ("*", List l)) = if exists isZero l then Constant 0 else operator "*" l
+fun reduceMultExpr (e as Operator ("*", List l)) = if exists isZero l then Constant 0 else e
   | reduceMultExpr e = raise InvalidExpression e
 
 (* Does the expression only contain constants? *)
