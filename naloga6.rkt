@@ -63,7 +63,5 @@
         [#t (cons (car ls) (take (- n 1) ((cdr ls))))]))
 
 ; Range stream
-(define (range_stream start stop step)
-  (if (> start stop)
-      null
-      (cons start (lambda () (range_stream (+ start step) stop step)))))
+(define (range_stream start step)
+  (cons start (lambda () (range_stream (+ start step) step))))
