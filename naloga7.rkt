@@ -39,3 +39,19 @@
     [(sml e1 :: e2) (cons e1 e2)]
     [(sml hd e) (car e)]
     [(sml tl e) (cdr e)]))
+
+; Create a promise
+(define (my-delay f)
+  (mcons 0 (mcons f #f)))
+
+; Resolve the promise on every fifth call to my-force
+(define (my-force f)
+  (if (= (modulo (mcar f) 5) 0)
+      (begin
+        (set-mcar! f (+ 1 (mcar f)))
+        (set-mcdr! (mcdr f) ((mcar (mcdr f))))
+        (mcdr (mcdr f)))
+      (begin
+        (set-mcar! f (+ 1 (mcar f)))
+        (mcdr (mcdr f)))))
+
