@@ -29,4 +29,13 @@
                (cons (* el el) (lambda () (f next)))))])
     (f s)))
 
-
+; SML macro for lists, support (::), hd, tl, nil, null
+(define-syntax sml
+  (syntax-rules (nil null :: hd tl)
+    [(sml nil) (list)]
+    [(sml null e) (empty? e)]
+    [(sml e :: nil) (list e)]
+    [(sml e :: null) (list e)]
+    [(sml e1 :: e2) (cons e1 e2)]
+    [(sml hd e) (car e)]
+    [(sml tl e) (cdr e)]))
