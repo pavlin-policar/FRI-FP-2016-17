@@ -55,3 +55,16 @@
         (set-mcar! f (+ 1 (mcar f)))
         (mcdr (mcdr f)))))
 
+; Partitions
+; This doesn't work for k = 1 or k = n, which should = 1, but return 0
+(define (partitions k n)
+  (letrec ([helper (lambda (k n)
+                     (cond [(< n 0) 0]
+                           [(and (= n 0) (> k 1)) 0]
+                           [(and (= k 0) (= n 1)) 1]
+                           [(and (>= k 1) (> n 0))
+                            (map (lambda (x) (helper (- k 1) x))
+                                 (map (lambda (x) (- n x)) (first n naturals)))]
+                           [(< k 2) 0]))])
+    (foldl + 0 (flatten (car (helper k n))))))
+  
