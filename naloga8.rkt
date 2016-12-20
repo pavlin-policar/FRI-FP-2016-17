@@ -59,3 +59,13 @@
            (if (true? vcond)
                (mi (if-then-else-e1 e))
                (mi (if-then-else-e2 e))))]))
+
+; If then else syntax
+(define-syntax ifte
+  (syntax-rules (ifte then else)
+    [(ifte cnd then left else right) (if-then-else cnd left right)]))
+
+; Less than syntax
+(define-syntax lt
+  (syntax-rules (lt)
+    [(lt left right) (gt right left)]))
