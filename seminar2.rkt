@@ -129,6 +129,9 @@
            (if (empty? ls)
                (mi (@-b e) env)
                (mi (:: (hd ls) (@ (tl ls) (@-b e))) env)))]
+        ; Fraction operations
+        [(numerator? e) (frac-e1 (mi (numerator-e e) env))]
+        [(denominator? e) (frac-e2 (mi (denominator-e e) env))]
         [#t (error "Not implemented")]))
 
 
@@ -175,4 +178,8 @@
 
 (define @-1 (mi (@ (:: (int 2) (:: (int 3) (empty))) (:: (int 4) (:: (int 5) (empty)))) '()))
 (define @-2 (mi (@ (empty) (empty)) (list)))
+
+; Fraction operations
+(define numerator-1 (mi (numerator (frac (add (int 5) (int 3)) (int 2))) (list)))
+(define denominator-1 (mi (denominator (frac (add (int 5) (int 3)) (int 2))) (list)))
 #||#
