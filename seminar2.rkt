@@ -54,7 +54,7 @@
                   [v2 (mi (frac-e2 e) env)])
            (if (and (int? v1) (int? v2))
                (let ([factor (gcd (int-n v1) (int-n v2))])
-                 (frac (/ (int-n v1) factor) (/ (int-n v2) factor)))
+                 (frac (int (/ (int-n v1) factor)) (int (/ (int-n v2) factor))))
                (error "The elements of the fraction are not ints")))]
         ; Flow control
         [(if-then-else? e)
@@ -72,7 +72,24 @@
         ; Arithmetic
         [(add? e)
          (let ([v1 (mi (add-e1 e) env)]
-               [v2 (mi (add-e2 e) env)])
+               [v2 (mi (add-e2 e) env)]
+               [to-frac (lambda (e) (frac e (int 1)))])
            (cond [(and (int? v1) (int? v2)) (int (+ (int-n v1) (int-n v2)))]
+                 [(int? v1) (mi (add (to-frac v1) v2) env)]
+                 [(int? v2) (mi (add v1 (to-frac v2)) env)]
+                 [(and (frac? v1) (frac? v2))
+                  ; Extract all the numbers out for simpler access
+                  (let ([x1 (int-n (frac-e1 v1))]
+                        [y1 (int-n (frac-e2 v1))]
+                        [x2 (int-n (frac-e1 v2))]
+                        [y2 (int-n (frac-e2 v2))])
+                    ; Since we're not using LCM multiplication, simply make sure to simplify
+                    ; equation after adding together
+                    (mi (frac (int (+ (* x1 y2) (* x2 y1))) (int (* y1 y2))) env))]
                  [#t (error "The elements cannot be added")]))]
-        [#t (false)]))
+        [#t (error "Not implemented")]))
+
+
+; Begin test section
+#||#
+#||#
