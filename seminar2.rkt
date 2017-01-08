@@ -45,18 +45,8 @@
 (struct envelope (env f) #:transparent)
 (struct call (e args) #:transparent)
 
-
-; Calculate the GCD of two numbers using the Euclidean method
-(define (gcd x y) (if (= y 0) x (gcd y (modulo x y))))
-
-; Calculate the LCM of two numbers
-(define (lcm x y) (/ (* x y) (gcd x y)))
-
-(define (zip l1 l2) (map cons l1 l2))
-
 ; Convert an int to a fraction by dividing it by one
 (define (to-frac x) (frac x (int 1)))
-
 
 (define (mi e env)
   (cond [(int? e) e]
@@ -67,7 +57,9 @@
         ; Convert fractions to their simplest form
         [(frac? e)
          (letrec ([v1 (mi (frac-e1 e) env)]
-                  [v2 (mi (frac-e2 e) env)])
+                  [v2 (mi (frac-e2 e) env)]
+                  ; Calculate the GCD of two numbers using the Euclidean method
+                  [gcd (lambda (x y) (if (= y 0) x (gcd y (modulo x y))))])
            (if (and (int? v1) (int? v2))
                (let ([factor (gcd (int-n v1) (int-n v2))])
                  (frac (int (/ (int-n v1) factor)) (int (/ (int-n v2) factor))))
@@ -160,6 +152,7 @@
                (mi (proc-body) fenv))
              ; Lexicographical scoping
              (letrec ([f (mi (call-e e) env)]
+                      [zip (lambda (l1 l2) (map cons l1 l2))]
                       [locals (append
                                (map (lambda (x) (cons (car x) (mi (cdr x) env)))
                                     (zip (fun-fargs (envelope-f f)) (call-args e)))
