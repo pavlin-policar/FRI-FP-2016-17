@@ -49,7 +49,7 @@
   (cond [(int? e) e]
         [(true? e) e]
         [(false? e) e]
-        [(::? e) e]
+        [(::? e) (:: (mi (::-e1 e) env) (mi (::-e2 e) env))]
         [(empty? e) e]
         ; Convert fractions to their simplest form
         [(frac? e)
@@ -114,11 +114,27 @@
         [(any? e) (if (or (true? (mi (any-e1 e) env))
                           (true? (mi (any-e2 e) env))) (true) (false))]
         [(!? e) (if (true? (mi (!-e e) env)) (false) (true))]
+        ; List operations
+        [(hd? e)
+         (let ([ls (mi (hd-x e) env)])
+           (if (::? ls) (::-e1 ls) (error "List is not valid")))]
+        [(tl? e)
+         (let ([ls (mi (tl-x e) env)])
+           (if (::? ls) (::-e2 ls) (error "List is not valid")))]
+        [(is-empty? e)
+         (let ([ls (mi (is-empty-x e) env)])
+           (if (empty? ls) (true) (false)))]
+        [(@? e)
+         (let ([ls (mi (@-a e) env)])
+           (if (empty? ls)
+               (mi (@-b e) env)
+               (mi (:: (hd ls) (@ (tl ls) (@-b e))) env)))]
         [#t (error "Not implemented")]))
 
 
 ; Begin test section
 #||#
+; Arithmetic operations
 (define add-1 (mi (add (int 3) (int 5)) (list)))
 (define add-2 (mi (add (int 3) (frac (int 1) (int 2))) (list)))
 (define add-3 (mi (add (frac (int 1) (int 2)) (int 3)) (list)))
@@ -137,6 +153,7 @@
 (define gt-6 (mi (gt (int 1) (frac (int 1) (int 2))) (list)))
 (define gt-7 (mi (gt (int 1) (frac (int 3) (int 2))) (list)))
 
+; Logical operations
 (define both-1 (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
 (define both-2 (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
 (define both-3 (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
@@ -149,4 +166,13 @@
 
 (define !-1 (mi (! (gt (int 3) (int 2))) (list)))
 (define !-2 (mi (! (gt (int 3) (int 4))) (list)))
+
+; List operations
+(define hd-1 (mi (hd (:: (int 2) (:: (int 3) (int 4)))) (list)))
+(define tl-1 (mi (tl (:: (int 2) (:: (int 3) (int 4)))) (list)))
+(define is-empty-1 (mi (is-empty (:: (int 2) (:: (int 3) (int 4)))) (list)))
+(define is-empty-2 (mi (is-empty (empty)) (list)))
+
+(define @-1 (mi (@ (:: (int 2) (:: (int 3) (empty))) (:: (int 4) (:: (int 5) (empty)))) '()))
+(define @-2 (mi (@ (empty) (empty)) (list)))
 #||#
