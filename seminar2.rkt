@@ -136,50 +136,69 @@
 
 
 ; Begin test section
+(define (assert e) (if e (void) (error "Assertion error")))
+(define (assert-eq e1 e2) (assert (equal? e1 e2)))
+(define (assert-true e) (assert (true? e)))
+(define (assert-false e) (assert (false? e)))
+(define (assert-empty e) (assert (empty? e)))
+(define (assert-not-empty e) (assert (not (empty? e))))
 #||#
 ; Arithmetic operations
-(define add-1 (mi (add (int 3) (int 5)) (list)))
-(define add-2 (mi (add (int 3) (frac (int 1) (int 2))) (list)))
-(define add-3 (mi (add (frac (int 1) (int 2)) (int 3)) (list)))
-(define add-4 (mi (add (frac (int 1) (int 2)) (frac (int 1) (int 2))) (list)))
+(assert-eq (int 8)
+           (mi (add (int 3) (int 5)) (list)))
+(assert-eq (frac (int 1) (int 1))
+           (mi (add (frac (int 1) (int 2)) (frac (int 1) (int 2))) (list)))
+(assert-eq (frac (int 7) (int 2))
+           (mi (add (int 3) (frac (int 1) (int 2))) (list)))
+(assert-eq (frac (int 7) (int 2))
+           (mi (add (frac (int 1) (int 2)) (int 3)) (list)))
 
-(define mul-1 (mi (mul (int 5) (int 3)) (list)))
-(define mul-2 (mi (mul (int 3) (frac (int 1) (int 2))) (list)))
-(define mul-3 (mi (mul (frac (int 1) (int 2)) (int 3)) (list)))
-(define mul-4 (mi (mul (frac (int 3) (int 4)) (frac (int 1) (int 2))) (list)))
+(assert-eq (int 15)
+           (mi (mul (int 5) (int 3)) (list)))
+(assert-eq (frac (int 3) (int 8))
+           (mi (mul (frac (int 3) (int 4)) (frac (int 1) (int 2))) (list)))
+(assert-eq (frac (int 3) (int 2))
+           (mi (mul (int 3) (frac (int 1) (int 2))) (list)))
+(assert-eq (frac (int 3) (int 2))
+           (mi (mul (frac (int 1) (int 2)) (int 3)) (list)))
 
-(define gt-1 (mi (gt (int 5) (int 3)) (list)))
-(define gt-2 (mi (gt (int 3) (int 5)) (list)))
-(define gt-3 (mi (gt (int 5) (int 5)) (list)))
-(define gt-4 (mi (gt (frac (int 1) (int 2)) (frac (int 1) (int 4))) (list)))
-(define gt-5 (mi (gt (frac (int 1) (int 4)) (frac (int 1) (int 2))) (list)))
-(define gt-6 (mi (gt (int 1) (frac (int 1) (int 2))) (list)))
-(define gt-7 (mi (gt (int 1) (frac (int 3) (int 2))) (list)))
+(assert-true (mi (gt (int 5) (int 3)) (list)))
+(assert-false (mi (gt (int 3) (int 5)) (list)))
+(assert-false (mi (gt (int 5) (int 5)) (list)))
+(assert-true (mi (gt (frac (int 1) (int 2)) (frac (int 1) (int 4))) (list)))
+(assert-false (mi (gt (frac (int 1) (int 4)) (frac (int 1) (int 2))) (list)))
+(assert-true (mi (gt (int 1) (frac (int 1) (int 2))) (list)))
+(assert-false (mi (gt (int 1) (frac (int 3) (int 2))) (list)))
 
 ; Logical operations
-(define both-1 (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
-(define both-2 (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
-(define both-3 (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
-(define both-4 (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
+(assert-true (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
+(assert-false (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
+(assert-false (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
+(assert-false (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
 
-(define any-1 (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
-(define any-2 (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
-(define any-3 (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
-(define any-4 (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
+(assert-true (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
+(assert-true (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
+(assert-true (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
+(assert-false (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
 
-(define !-1 (mi (! (gt (int 3) (int 2))) (list)))
-(define !-2 (mi (! (gt (int 3) (int 4))) (list)))
+(assert-false (mi (! (gt (int 3) (int 2))) (list)))
+(assert-true (mi (! (gt (int 3) (int 4))) (list)))
 
 ; List operations
-(define hd-1 (mi (hd (:: (int 2) (:: (int 3) (int 4)))) (list)))
-(define tl-1 (mi (tl (:: (int 2) (:: (int 3) (int 4)))) (list)))
-(define is-empty-1 (mi (is-empty (:: (int 2) (:: (int 3) (int 4)))) (list)))
-(define is-empty-2 (mi (is-empty (empty)) (list)))
+(assert-eq (int 2)
+           (mi (hd (:: (int 2) (:: (int 3) (int 4)))) (list)))
 
-(define @-1 (mi (@ (:: (int 2) (:: (int 3) (empty))) (:: (int 4) (:: (int 5) (empty)))) '()))
-(define @-2 (mi (@ (empty) (empty)) (list)))
+(assert-eq (:: (int 3) (int 4))
+           (mi (tl (:: (int 2) (:: (int 3) (int 4)))) (list)))
+
+(assert-false (mi (is-empty (:: (int 2) (:: (int 3) (int 4)))) (list)))
+(assert-true (mi (is-empty (empty)) (list)))
+
+(assert-eq (:: (int 2) (:: (int 3) (:: (int 4) (:: (int 5) (empty)))))
+           (mi (@ (:: (int 2) (:: (int 3) (empty))) (:: (int 4) (:: (int 5) (empty)))) (list)))
+(assert-empty (mi (@ (empty) (empty)) (list)))
 
 ; Fraction operations
-(define numerator-1 (mi (numerator (frac (add (int 5) (int 3)) (int 2))) (list)))
-(define denominator-1 (mi (denominator (frac (add (int 5) (int 3)) (int 2))) (list)))
+(assert-eq (int 4) (mi (numerator (frac (add (int 5) (int 3)) (int 2))) (list)))
+(assert-eq (int 1) (mi (denominator (frac (add (int 5) (int 3)) (int 2))) (list)))
 #||#
