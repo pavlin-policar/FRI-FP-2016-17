@@ -97,6 +97,15 @@
                  [(and (frac? v1) (frac? v2))
                   (mi (frac (int (* (int-n (frac-e1 v1)) (int-n (frac-e1 v2))))
                             (int (* (int-n (frac-e2 v1)) (int-n (frac-e2 v2))))) env)]))]
+        [(gt? e)
+         (let ([v1 (mi (gt-e1 e) env)]
+               [v2 (mi (gt-e2 e) env)])
+           (cond [(and (int? v1) (int? v2)) (if (> (int-n v1) (int-n v2)) (true) (false))]
+                 [(int? v1) (mi (gt (to-frac v1) v2) env)]
+                 [(int? v2) (mi (gt v1 (to-frac v2)) env)]
+                 [(and (frac? v1) (frac? v2))
+                  (if (> (/ (int-n (frac-e1 v1)) (int-n (frac-e2 v1)))
+                         (/ (int-n (frac-e1 v2)) (int-n (frac-e2 v2)))) (true) (false))]))]
         [#t (error "Not implemented")]))
 
 
@@ -111,4 +120,12 @@
 (define mul-2 (mi (mul (int 3) (frac (int 1) (int 2))) (list)))
 (define mul-3 (mi (mul (frac (int 1) (int 2)) (int 3)) (list)))
 (define mul-4 (mi (mul (frac (int 3) (int 4)) (frac (int 1) (int 2))) (list)))
+
+(define gt-1 (mi (gt (int 5) (int 3)) (list)))
+(define gt-2 (mi (gt (int 3) (int 5)) (list)))
+(define gt-3 (mi (gt (int 5) (int 5)) (list)))
+(define gt-4 (mi (gt (frac (int 1) (int 2)) (frac (int 1) (int 4))) (list)))
+(define gt-5 (mi (gt (frac (int 1) (int 4)) (frac (int 1) (int 2))) (list)))
+(define gt-6 (mi (gt (int 1) (frac (int 1) (int 2))) (list)))
+(define gt-7 (mi (gt (int 1) (frac (int 3) (int 2))) (list)))
 #||#
