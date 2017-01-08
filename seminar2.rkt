@@ -52,10 +52,11 @@
 ; Calculate the LCM of two numbers
 (define (lcm x y) (/ (* x y) (gcd x y)))
 
+(define (zip l1 l2) (map cons l1 l2))
+
 ; Convert an int to a fraction by dividing it by one
 (define (to-frac x) (frac x (int 1)))
 
-(define (zip l1 l2) (map cons l1 l2))
 
 (define (mi e env)
   (cond [(int? e) e]
@@ -159,26 +160,35 @@
                (mi (proc-body) fenv))
              ; Lexicographical scoping
              (letrec ([f (mi (call-e e) env)]
-                  [locals (append
-                           (map (lambda (x) (cons (car x) (mi (cdr x) env)))
-                                (zip (fun-fargs (envelope-f f)) (call-args e)))
-                           ; Do not add the function to environment if lambda
-                           ; No need to evaluate the function envelope again
-                           (if (eq? (fun-name (envelope-f f)) "")
-                               (list)
-                               (list (cons (fun-name (envelope-f f)) f)))]
-                  ; Include locals with the outer environment
-                  ; Remove shadowed variables
-                  ; TODO: Find used variables in function and remove the unused ones
-                  [fenv (remove-duplicates (append locals (envelope-env f))
-                                           #:key (lambda (x) (car x)))])
-           (mi (fun-body (envelope-f f)) fenv)))
-         ]
+                      [locals (append
+                               (map (lambda (x) (cons (car x) (mi (cdr x) env)))
+                                    (zip (fun-fargs (envelope-f f)) (call-args e)))
+                               ; Do not add the function to environment if lambda
+                               ; No need to evaluate the function envelope again
+                               (if (eq? (fun-name (envelope-f f)) "")
+                                   null
+                                   (list (cons (fun-name (envelope-f f)) f))))]
+                      ; Include locals with the outer environment
+                      ; Remove shadowed variables
+                      ; TODO: Find used variables in function and remove the unused ones
+                      [fenv (remove-duplicates (append locals (envelope-env f))
+                                               #:key (lambda (x) (car x)))])
+               (mi (fun-body (envelope-f f)) fenv)))]
         [#t (error (~a "Not implemented" e))]))
+
+; Macros
+; NOTE: to-int is defined above `mi` function since it was used there as well
+(define (inv e) (frac (frac-e2 e) (frac-e1 e)))
+(define (~ e)
+  (cond [(int? e) (int (- 0 (int-n e)))]
+        [(frac? e) (frac (int (- 0 (int-n (frac-e1 e)))) (frac-e2 e))]))
+(define (lt e1 e2) (gt e2 e1))
+(define (same e1 e2) (! (any (gt e1 e2) (lt e1 e2))))
 
 
 ; Begin test section
 #||#
+
 ; Define assertion helpers
 (define (assert e) (if e (void) (error "Assertion error")))
 (define (assert-eq e1 e2) (assert (equal? e1 e2)))
@@ -186,71 +196,62 @@
 (define (assert-false e) (assert (false? e)))
 (define (assert-empty e) (assert (empty? e)))
 (define (assert-not-empty e) (assert (not (empty? e))))
+
 ; Arithmetic operations
-(assert-eq (int 8)
-           (mi (add (int 3) (int 5)) (list)))
-(assert-eq (frac (int 1) (int 1))
-           (mi (add (frac (int 1) (int 2)) (frac (int 1) (int 2))) (list)))
-(assert-eq (frac (int 7) (int 2))
-           (mi (add (int 3) (frac (int 1) (int 2))) (list)))
-(assert-eq (frac (int 7) (int 2))
-           (mi (add (frac (int 1) (int 2)) (int 3)) (list)))
+(assert-eq (int 8) (mi (add (int 3) (int 5)) null))
+(assert-eq (frac (int 1) (int 1)) (mi (add (frac (int 1) (int 2)) (frac (int 1) (int 2))) null))
+(assert-eq (frac (int 7) (int 2)) (mi (add (int 3) (frac (int 1) (int 2))) null))
+(assert-eq (frac (int 7) (int 2)) (mi (add (frac (int 1) (int 2)) (int 3)) null))
 
-(assert-eq (int 15)
-           (mi (mul (int 5) (int 3)) (list)))
-(assert-eq (frac (int 3) (int 8))
-           (mi (mul (frac (int 3) (int 4)) (frac (int 1) (int 2))) (list)))
-(assert-eq (frac (int 3) (int 2))
-           (mi (mul (int 3) (frac (int 1) (int 2))) (list)))
-(assert-eq (frac (int 3) (int 2))
-           (mi (mul (frac (int 1) (int 2)) (int 3)) (list)))
+(assert-eq (int 15) (mi (mul (int 5) (int 3)) null))
+(assert-eq (frac (int 3) (int 8)) (mi (mul (frac (int 3) (int 4)) (frac (int 1) (int 2))) null))
+(assert-eq (frac (int 3) (int 2)) (mi (mul (int 3) (frac (int 1) (int 2))) null))
+(assert-eq (frac (int 3) (int 2)) (mi (mul (frac (int 1) (int 2)) (int 3)) null))
 
-(assert-true (mi (gt (int 5) (int 3)) (list)))
-(assert-false (mi (gt (int 3) (int 5)) (list)))
-(assert-false (mi (gt (int 5) (int 5)) (list)))
-(assert-true (mi (gt (frac (int 1) (int 2)) (frac (int 1) (int 4))) (list)))
-(assert-false (mi (gt (frac (int 1) (int 4)) (frac (int 1) (int 2))) (list)))
-(assert-true (mi (gt (int 1) (frac (int 1) (int 2))) (list)))
-(assert-false (mi (gt (int 1) (frac (int 3) (int 2))) (list)))
+(assert-true (mi (gt (int 5) (int 3)) null))
+(assert-false (mi (gt (int 3) (int 5)) null))
+(assert-false (mi (gt (int 5) (int 5)) null))
+(assert-true (mi (gt (frac (int 1) (int 2)) (frac (int 1) (int 4))) null))
+(assert-false (mi (gt (frac (int 1) (int 4)) (frac (int 1) (int 2))) null))
+(assert-true (mi (gt (int 1) (frac (int 1) (int 2))) null))
+(assert-false (mi (gt (int 1) (frac (int 3) (int 2))) null))
 
 ; Logical operations
-(assert-true (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
-(assert-false (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
-(assert-false (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
-(assert-false (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
+(assert-true (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 2))) null))
+(assert-false (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 2))) null))
+(assert-false (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 4))) null))
+(assert-false (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 4))) null))
 
-(assert-true (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
-(assert-true (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
-(assert-true (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
-(assert-false (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
+(assert-true (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 2))) null))
+(assert-true (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 2))) null))
+(assert-true (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 4))) null))
+(assert-false (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 4))) null))
 
-(assert-false (mi (! (gt (int 3) (int 2))) (list)))
-(assert-true (mi (! (gt (int 3) (int 4))) (list)))
+(assert-false (mi (! (gt (int 3) (int 2))) null))
+(assert-true (mi (! (gt (int 3) (int 4))) null))
 
 ; List operations
-(assert-eq (int 2)
-           (mi (hd (:: (int 2) (:: (int 3) (int 4)))) (list)))
+(assert-eq (int 2) (mi (hd (:: (int 2) (:: (int 3) (int 4)))) null))
 
-(assert-eq (:: (int 3) (int 4))
-           (mi (tl (:: (int 2) (:: (int 3) (int 4)))) (list)))
+(assert-eq (:: (int 3) (int 4)) (mi (tl (:: (int 2) (:: (int 3) (int 4)))) null))
 
-(assert-false (mi (is-empty (:: (int 2) (:: (int 3) (int 4)))) (list)))
-(assert-true (mi (is-empty (empty)) (list)))
+(assert-false (mi (is-empty (:: (int 2) (:: (int 3) (int 4)))) null))
+(assert-true (mi (is-empty (empty)) null))
 
 (assert-eq (:: (int 2) (:: (int 3) (:: (int 4) (:: (int 5) (empty)))))
-           (mi (@ (:: (int 2) (:: (int 3) (empty))) (:: (int 4) (:: (int 5) (empty)))) (list)))
-(assert-empty (mi (@ (empty) (empty)) (list)))
+           (mi (@ (:: (int 2) (:: (int 3) (empty))) (:: (int 4) (:: (int 5) (empty)))) null))
+(assert-empty (mi (@ (empty) (empty)) null))
 
 ; Fraction operations
-(assert-eq (int 4) (mi (numerator (frac (add (int 5) (int 3)) (int 2))) (list)))
-(assert-eq (int 1) (mi (denominator (frac (add (int 5) (int 3)) (int 2))) (list)))
+(assert-eq (int 4) (mi (numerator (frac (add (int 5) (int 3)) (int 2))) null))
+(assert-eq (int 1) (mi (denominator (frac (add (int 5) (int 3)) (int 2))) null))
 
 ; Variables
-(assert-eq (int 4) (mi (var "_" (true) (int 4)) (list)))
+(assert-eq (int 4) (mi (var "_" (true) (int 4)) null))
 (assert-eq (int 4) (mi (valof "a") (list (cons "a" (int 4)))))
 (assert-eq (int 4) (mi (var "a" (int 3) (var "b" (int 1) (add (valof "a") (valof "b")))) '()))
 ; test variable shadowing
-(assert-eq (int 1) (mi (var "a" (int 2) (var "a" (int 1) (valof "a"))) (list)))
+(assert-eq (int 1) (mi (var "a" (int 2) (var "a" (int 1) (valof "a"))) null))
 
 ; Functions
 ; dynamically scoped functions
@@ -269,4 +270,28 @@
         (mul (valof "a")
              (call (valof "power") (list (valof "a") (add (valof "x") (int -1))))))))
 (assert-eq (int 8) (mi (call power (list (int 2) (int 3))) null))
+
+; Macros
+(assert-eq (frac (int 2) (int 1)) (mi (to-frac (int 2)) null))
+
+(assert-eq (frac (int 4) (int 3)) (mi (inv (frac (add (int 1) (int 2)) (mul (int 2) (int 2)))) null))
+
+(assert-eq (int -5) (mi (~ (int 5)) null))
+(assert-eq (frac (int -1) (int 2)) (mi (~ (frac (int 1) (int 2))) null))
+
+(assert-false (mi (lt (int 5) (int 3)) null))
+(assert-true (mi (lt (int 3) (int 5)) null))
+(assert-false (mi (lt (int 5) (int 5)) null))
+(assert-false (mi (lt (frac (int 1) (int 2)) (frac (int 1) (int 4))) null))
+(assert-true (mi (lt (frac (int 1) (int 4)) (frac (int 1) (int 2))) null))
+(assert-false (mi (lt (int 1) (frac (int 1) (int 2))) null))
+(assert-true (mi (lt (int 1) (frac (int 3) (int 2))) null))
+
+(assert-true (mi (same (int 5) (int 5)) null))
+(assert-false (mi (same (int 4) (int 5)) null))
+(assert-false (mi (same (int 5) (int 4)) null))
+(assert-true (mi (same (frac (int 1) (int 2)) (frac (int 1) (int 2))) null))
+(assert-false (mi (same (frac (int 1) (int 3)) (frac (int 1) (int 2))) null))
+(assert-false (mi (same (frac (int 1) (int 2)) (frac (int 1) (int 3))) null))
+
 #||#
