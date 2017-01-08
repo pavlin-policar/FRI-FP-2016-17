@@ -32,8 +32,8 @@
 (struct @ (a b))
 
 ; Fraction operations
-(struct numerator (e1))
-(struct denominator (e1))
+(struct numerator (e))
+(struct denominator (e))
 
 
 ; Calculate the GCD of two numbers using the Euclidean method
@@ -42,6 +42,7 @@
 ; Calculate the LCM of two numbers
 (define (lcm x y) (/ (* x y) (gcd x y)))
 
+; Convert an int to a fraction by dividing it by one
 (define (to-frac x) (frac x (int 1)))
 
 (define (mi e env)
@@ -71,7 +72,7 @@
         [(is-frac? e) (if (frac? (mi (is-frac-e e) env)) (true) (false))]
         [(is-list? e) (let ([v (mi (is-list-e e) env)])
                         (if (or (::? v) (empty? v)) (true) (false)))]
-        ; Arithmetic
+        ; Arithmetic operations
         [(add? e)
          (let ([v1 (mi (add-e1 e) env)]
                [v2 (mi (add-e2 e) env)])
@@ -104,8 +105,15 @@
                  [(int? v1) (mi (gt (to-frac v1) v2) env)]
                  [(int? v2) (mi (gt v1 (to-frac v2)) env)]
                  [(and (frac? v1) (frac? v2))
+                  ; We won't do any magic and just let racket compare the two real numbers
                   (if (> (/ (int-n (frac-e1 v1)) (int-n (frac-e2 v1)))
                          (/ (int-n (frac-e1 v2)) (int-n (frac-e2 v2)))) (true) (false))]))]
+        ; Logcal operations
+        [(both? e) (if (and (true? (mi (both-e1 e) env))
+                            (true? (mi (both-e2 e) env))) (true) (false))]
+        [(any? e) (if (or (true? (mi (any-e1 e) env))
+                          (true? (mi (any-e2 e) env))) (true) (false))]
+        [(!? e) (if (true? (mi (!-e e) env)) (false) (true))]
         [#t (error "Not implemented")]))
 
 
@@ -128,4 +136,17 @@
 (define gt-5 (mi (gt (frac (int 1) (int 4)) (frac (int 1) (int 2))) (list)))
 (define gt-6 (mi (gt (int 1) (frac (int 1) (int 2))) (list)))
 (define gt-7 (mi (gt (int 1) (frac (int 3) (int 2))) (list)))
+
+(define both-1 (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
+(define both-2 (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
+(define both-3 (mi (both (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
+(define both-4 (mi (both (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
+
+(define any-1 (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 2))) (list)))
+(define any-2 (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 2))) (list)))
+(define any-3 (mi (any (gt (int 3) (int 2)) (gt (int 3) (int 4))) (list)))
+(define any-4 (mi (any (gt (int 3) (int 4)) (gt (int 3) (int 4))) (list)))
+
+(define !-1 (mi (! (gt (int 3) (int 2))) (list)))
+(define !-2 (mi (! (gt (int 3) (int 4))) (list)))
 #||#
