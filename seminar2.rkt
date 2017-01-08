@@ -213,5 +213,7 @@
 (assert-eq (int 4) (mi (var "_" (true) (int 4)) (list)))
 (assert-eq (int 4) (mi (valof "a") (list (cons "a" (int 4)))))
 (assert-eq (int 4) (mi (var "a" (int 3) (var "b" (int 1) (add (valof "a") (valof "b")))) '()))
+; test variable shadowing
+(assert-eq (int 1) (mi (var "a" (int 2) (var "a" (int 1) (valof "a"))) (list)))
 
 #||#
