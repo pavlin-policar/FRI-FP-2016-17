@@ -39,6 +39,12 @@
 (struct var (s e1 e2))
 (struct valof (s))
 
+; Functions
+(struct fun (name fargs body) #:transparent)
+(struct proc (name body) #:transparent)
+(struct envelope (env f) #:transparent)
+(struct call (e args) #:transparent)
+
 
 ; Calculate the GCD of two numbers using the Euclidean method
 (define (gcd x y) (if (= y 0) x (gcd y (modulo x y))))
@@ -48,6 +54,8 @@
 
 ; Convert an int to a fraction by dividing it by one
 (define (to-frac x) (frac x (int 1)))
+
+(define (zip l1 l2) (map cons l1 l2))
 
 (define (mi e env)
   (cond [(int? e) e]
@@ -139,17 +147,30 @@
         ; Variables
         [(var? e) (mi (var-e2 e) (cons (cons (var-s e) (var-e1 e)) env))]
         [(valof? e) (mi (cdr (assoc (valof-s e) env)) env)]
+        ; Functions
+        [(fun? e) (envelope env e)]
+        [(proc? e) e]
+        [(envelope? e) e]
+        [(call? e)
+         (letrec ([f (mi (call-e e) env)]
+                  [locals (map (lambda (x) (cons (car x) (mi (cdr x) env)))
+                               (append
+                                (zip (fun-fargs (envelope-f f)) (call-args e))
+                                (list (cons (fun-name (envelope-f f)) f))))]
+                  [fenv (append locals (envelope-env f))])
+           (mi (fun-body (envelope-f f)) fenv))]
         [#t (error (~a "Not implemented" e))]))
 
 
 ; Begin test section
+#||#
+; Define assertion helpers
 (define (assert e) (if e (void) (error "Assertion error")))
 (define (assert-eq e1 e2) (assert (equal? e1 e2)))
 (define (assert-true e) (assert (true? e)))
 (define (assert-false e) (assert (false? e)))
 (define (assert-empty e) (assert (empty? e)))
 (define (assert-not-empty e) (assert (not (empty? e))))
-#||#
 ; Arithmetic operations
 (assert-eq (int 8)
            (mi (add (int 3) (int 5)) (list)))
@@ -216,4 +237,16 @@
 ; test variable shadowing
 (assert-eq (int 1) (mi (var "a" (int 2) (var "a" (int 1) (valof "a"))) (list)))
 
+; Functions
+(define add3 (fun "add3" (list "a" "b" "c") (add (valof "a") (add (valof "b") (valof "c")))))
+(assert-eq (int 6) (mi (call add3 (list (int 1) (int 2) (int 3))) null))
+; recursive multiply
+(define power
+  (fun "power" (list "a" "x")
+       (if-then-else
+        (! (gt (valof "x") (int 1)))
+        (valof "a")
+        (mul (valof "a")
+             (call (valof "power") (list (valof "a") (add (valof "x") (int -1))))))))
+(assert-eq (int 8) (mi (call power (list (int 2) (int 3))) null))
 #||#
