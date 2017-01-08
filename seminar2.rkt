@@ -42,6 +42,8 @@
 ; Calculate the LCM of two numbers
 (define (lcm x y) (/ (* x y) (gcd x y)))
 
+(define (to-frac x) (frac x (int 1)))
+
 (define (mi e env)
   (cond [(int? e) e]
         [(true? e) e]
@@ -72,8 +74,7 @@
         ; Arithmetic
         [(add? e)
          (let ([v1 (mi (add-e1 e) env)]
-               [v2 (mi (add-e2 e) env)]
-               [to-frac (lambda (e) (frac e (int 1)))])
+               [v2 (mi (add-e2 e) env)])
            (cond [(and (int? v1) (int? v2)) (int (+ (int-n v1) (int-n v2)))]
                  [(int? v1) (mi (add (to-frac v1) v2) env)]
                  [(int? v2) (mi (add v1 (to-frac v2)) env)]
@@ -87,9 +88,27 @@
                     ; equation after adding together
                     (mi (frac (int (+ (* x1 y2) (* x2 y1))) (int (* y1 y2))) env))]
                  [#t (error "The elements cannot be added")]))]
+        [(mul? e)
+         (let ([v1 (mi (mul-e1 e) env)]
+               [v2 (mi (mul-e2 e) env)])
+           (cond [(and (int? v1) (int? v2)) (int (* (int-n v1) (int-n v2)))]
+                 [(int? v1) (mi (mul (to-frac v1) v2) env)]
+                 [(int? v2) (mi (mul v1 (to-frac v2)) env)]
+                 [(and (frac? v1) (frac? v2))
+                  (mi (frac (int (* (int-n (frac-e1 v1)) (int-n (frac-e1 v2))))
+                            (int (* (int-n (frac-e2 v1)) (int-n (frac-e2 v2))))) env)]))]
         [#t (error "Not implemented")]))
 
 
 ; Begin test section
 #||#
+(define add-1 (mi (add (int 3) (int 5)) (list)))
+(define add-2 (mi (add (int 3) (frac (int 1) (int 2))) (list)))
+(define add-3 (mi (add (frac (int 1) (int 2)) (int 3)) (list)))
+(define add-4 (mi (add (frac (int 1) (int 2)) (frac (int 1) (int 2))) (list)))
+
+(define mul-1 (mi (mul (int 5) (int 3)) (list)))
+(define mul-2 (mi (mul (int 3) (frac (int 1) (int 2))) (list)))
+(define mul-3 (mi (mul (frac (int 1) (int 2)) (int 3)) (list)))
+(define mul-4 (mi (mul (frac (int 3) (int 4)) (frac (int 1) (int 2))) (list)))
 #||#
