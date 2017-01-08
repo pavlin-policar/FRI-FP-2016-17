@@ -152,13 +152,25 @@
         [(proc? e) e]
         [(envelope? e) e]
         [(call? e)
-         (letrec ([f (mi (call-e e) env)]
-                  [locals (map (lambda (x) (cons (car x) (mi (cdr x) env)))
-                               (append
-                                (zip (fun-fargs (envelope-f f)) (call-args e))
-                                (list (cons (fun-name (envelope-f f)) f))))]
-                  [fenv (append locals (envelope-env f))])
-           (mi (fun-body (envelope-f f)) fenv))]
+         (if (proc? e)
+             ; Dynamic scoping
+             ; Don't forget to add the procedure itself into the env
+             (let ([fenv (cons (cons (proc-name e) e))])
+               (mi (proc-body) fenv))
+             ; Lexicographical scoping
+             (letrec ([f (mi (call-e e) env)]
+                  [locals (append
+                           (map (lambda (x) (cons (car x) (mi (cdr x) env)))
+                                (zip (fun-fargs (envelope-f f)) (call-args e)))
+                           ; No need to evaluate the function envelope again
+                           (list (cons (fun-name (envelope-f f)) f)))]
+                  ; Include locals with the outer environment
+                  ; Remove shadowed variables
+                  ; TODO: Find used variables in function and remove the unused ones
+                  [fenv (remove-duplicates (append locals (envelope-env f))
+                                           #:key (lambda (x) (car x)))])
+           (mi (fun-body (envelope-f f)) fenv)))
+         ]
         [#t (error (~a "Not implemented" e))]))
 
 
@@ -238,6 +250,11 @@
 (assert-eq (int 1) (mi (var "a" (int 2) (var "a" (int 1) (valof "a"))) (list)))
 
 ; Functions
+; dynamically scoped functions
+(define foo (fun "foo" null (mul (int 2) (valof "n"))))
+(assert-eq (int 2) (mi (var "n" (int 1) (call foo null)) null))
+
+; lexicographicaly scope functions
 (define add3 (fun "add3" (list "a" "b" "c") (add (valof "a") (add (valof "b") (valof "c")))))
 (assert-eq (int 6) (mi (call add3 (list (int 1) (int 2) (int 3))) null))
 ; recursive multiply
