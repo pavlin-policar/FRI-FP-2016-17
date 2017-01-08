@@ -35,6 +35,10 @@
 (struct numerator (e))
 (struct denominator (e))
 
+; Variables
+(struct var (s e1 e2))
+(struct valof (s))
+
 
 ; Calculate the GCD of two numbers using the Euclidean method
 (define (gcd x y) (if (= y 0) x (gcd y (modulo x y))))
@@ -132,7 +136,10 @@
         ; Fraction operations
         [(numerator? e) (frac-e1 (mi (numerator-e e) env))]
         [(denominator? e) (frac-e2 (mi (denominator-e e) env))]
-        [#t (error "Not implemented")]))
+        ; Variables
+        [(var? e) (mi (var-e2 e) (cons (cons (var-s e) (var-e1 e)) env))]
+        [(valof? e) (mi (cdr (assoc (valof-s e) env)) env)]
+        [#t (error (~a "Not implemented" e))]))
 
 
 ; Begin test section
@@ -201,4 +208,10 @@
 ; Fraction operations
 (assert-eq (int 4) (mi (numerator (frac (add (int 5) (int 3)) (int 2))) (list)))
 (assert-eq (int 1) (mi (denominator (frac (add (int 5) (int 3)) (int 2))) (list)))
+
+; Variables
+(assert-eq (int 4) (mi (var "_" (true) (int 4)) (list)))
+(assert-eq (int 4) (mi (valof "a") (list (cons "a" (int 4)))))
+(assert-eq (int 4) (mi (var "a" (int 3) (var "b" (int 1) (add (valof "a") (valof "b")))) '()))
+
 #||#
