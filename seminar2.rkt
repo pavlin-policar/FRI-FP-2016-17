@@ -154,16 +154,19 @@
         [(call? e)
          (if (proc? e)
              ; Dynamic scoping
-             ; Don't forget to add the procedure itself into the env
-             (let ([fenv (cons (cons (proc-name e) e))])
+             ; Don't forget to add the procedure itself into the env unless lambda expression
+             (let ([fenv (cons (if (eq? (proc-name e) "") null (cons (proc-name e) e)))])
                (mi (proc-body) fenv))
              ; Lexicographical scoping
              (letrec ([f (mi (call-e e) env)]
                   [locals (append
                            (map (lambda (x) (cons (car x) (mi (cdr x) env)))
                                 (zip (fun-fargs (envelope-f f)) (call-args e)))
+                           ; Do not add the function to environment if lambda
                            ; No need to evaluate the function envelope again
-                           (list (cons (fun-name (envelope-f f)) f)))]
+                           (if (eq? (fun-name (envelope-f f)) "")
+                               (list)
+                               (list (cons (fun-name (envelope-f f)) f)))]
                   ; Include locals with the outer environment
                   ; Remove shadowed variables
                   ; TODO: Find used variables in function and remove the unused ones
