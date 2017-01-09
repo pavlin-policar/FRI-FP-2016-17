@@ -137,9 +137,9 @@
         ; Fraction operations
         [(numerator? e) (frac-e1 (mi (numerator-e e) env))]
         [(denominator? e) (frac-e2 (mi (denominator-e e) env))]
-        ; Variables
-        [(var? e) (mi (var-e2 e) (cons (cons (var-s e) (var-e1 e)) env))]
-        [(valof? e) (mi (cdr (assoc (valof-s e) env)) env)]
+        ; Variables with eager evaluation
+        [(var? e) (mi (var-e2 e) (cons (cons (var-s e) (mi (var-e1 e) env)) env))]
+        [(valof? e) (cdr (assoc (valof-s e) env))]
         ; Functions
         [(fun? e) (envelope env e)]
         [(proc? e) e]
