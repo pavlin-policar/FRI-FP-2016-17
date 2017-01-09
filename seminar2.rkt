@@ -36,8 +36,8 @@
 (struct denominator (e))
 
 ; Variables
-(struct var (s e1 e2))
-(struct valof (s))
+(struct var (s e1 e2) #:transparent)
+(struct valof (s) #:transparent)
 
 ; Functions
 (struct fun (name fargs body) #:transparent)
@@ -145,45 +145,54 @@
         [(proc? e) e]
         [(envelope? e) e]
         [(call? e)
-         (if (proc? e)
+         (let ([f (mi (call-e e) env)])
+           (cond
              ; Dynamic scoping
              ; Don't forget to add the procedure itself into the env unless lambda expression
-             (let ([fenv (cons (if (eq? (proc-name e) "") null (cons (proc-name e) e)))])
-               (mi (proc-body) fenv))
+             [(proc? f)
+              (let ([fenv (cons (if (eq? (proc-name f) "") null (cons (proc-name f) f)) env)])
+                (mi (proc-body f) fenv))]
              ; Lexicographical scoping
-             (letrec ([f (mi (call-e e) env)]
-                      [zip (lambda (l1 l2) (map cons l1 l2))]
-                      [locals (append
-                               (map (lambda (x) (cons (car x) (mi (cdr x) env)))
-                                    (zip (fun-fargs (envelope-f f)) (call-args e)))
-                               ; Do not add the function to environment if lambda
-                               ; No need to evaluate the function envelope again
-                               (if (eq? (fun-name (envelope-f f)) "")
-                                   null
-                                   (list (cons (fun-name (envelope-f f)) f))))]
-                      ; Include locals with the outer environment
-                      ; Remove shadowed variables
-                      ; TODO: Find used variables in function and remove the unused ones
-                      [fenv (remove-duplicates (append locals (envelope-env f))
-                                               #:key (lambda (x) (car x)))])
-               (mi (fun-body (envelope-f f)) fenv)))]
-        [#t (error (~a "Not implemented" e))]))
+             [(envelope? f)
+              (letrec ([zip (lambda (l1 l2) (map cons l1 l2))]
+                       [locals (append
+                                (map (lambda (x) (cons (car x) (mi (cdr x) env)))
+                                     (zip (fun-fargs (envelope-f f)) (call-args e)))
+                                ; Do not add the function to environment if lambda
+                                ; No need to evaluate the function envelope again
+                                (if (eq? (fun-name (envelope-f f)) "")
+                                    null
+                                    (list (cons (fun-name (envelope-f f)) f))))]
+                       ; Include locals with the outer environment
+                       ; Remove shadowed variables
+                       ; TODO: Find used variables in function and remove the unused ones
+                       [fenv (remove-duplicates (append locals (envelope-env f))
+                                                #:key (lambda (x) (car x)))])
+                (mi (fun-body (envelope-f f)) fenv))]
+             ; In the case that the variable gets shadowed and is not an actual function, simply
+             ; return that value
+             [#t (mi f env)]))]
+        [#t e]))
 
 ; Macros
 ; NOTE: to-int is defined above `mi` function since it was used there as well
-(define (inv e) (frac (frac-e2 e) (frac-e1 e)))
+(define (inv e) (let ([v e]) (frac (frac-e2 v) (frac-e1 v))))
 (define (~ e)
-  (cond [(int? e) (int (- 0 (int-n e)))]
-        [(frac? e) (frac (int (- 0 (int-n (frac-e1 e)))) (frac-e2 e))]))
+  (let ([v e])
+    (cond [(int? e) (int (- 0 (int-n e)))]
+          [(frac? e) (frac (int (- 0 (int-n (frac-e1 e)))) (frac-e2 e))])))
 (define (lt e1 e2) (gt e2 e1))
-(define (same e1 e2) (! (any (gt e1 e2) (lt e1 e2))))
+(define (same e1 e2)
+  (let ([v1 e1]
+        [v2 e2])
+    (! (any (gt v1 v2) (lt v1 v2)))))
 
 
 ; Begin test section
 #||#
 
 ; Define assertion helpers
-(define (assert e) (if e (void) (error "Assertion error")))
+(define (assert e) (unless e (error "Assertion error")))
 (define (assert-eq e1 e2) (assert (equal? e1 e2)))
 (define (assert-true e) (assert (true? e)))
 (define (assert-false e) (assert (false? e)))
@@ -248,13 +257,21 @@
 
 ; Functions
 ; dynamically scoped functions
-(define foo (fun "foo" null (mul (int 2) (valof "n"))))
-(assert-eq (int 2) (mi (var "n" (int 1) (call foo null)) null))
+(assert-eq (int 2) (mi (call (proc "f" (int 2)) null) null))
+(assert-eq (int 2) (mi (var "n" (int 1) (call (proc "foo" (mul (int 2) (valof "n"))) null)) null))
+
+(define add-to
+  (proc "add-to"
+        (if-then-else
+         (lt (valof "i") (int 3))
+         (var "i" (add (valof "i") (int 1)) (call (valof "add-to") null))
+         (valof "i"))))
+(assert-eq (int 3) (mi (var "i" (int 1) (call add-to null)) null))
 
 ; lexicographicaly scope functions
 (define add3 (fun "add3" (list "a" "b" "c") (add (valof "a") (add (valof "b") (valof "c")))))
 (assert-eq (int 6) (mi (call add3 (list (int 1) (int 2) (int 3))) null))
-; recursive multiply
+; recursive power
 (define power
   (fun "power" (list "a" "x")
        (if-then-else
@@ -263,6 +280,10 @@
         (mul (valof "a")
              (call (valof "power") (list (valof "a") (add (valof "x") (int -1))))))))
 (assert-eq (int 8) (mi (call power (list (int 2) (int 3))) null))
+
+; shadow function name
+(assert-eq (int 2) (mi (call (fun "f" null (var "f" (int 2) (valof "f"))) null) null))
+(assert-eq (int 2) (mi (call (fun "f" null (var "f" (int 2) (call (valof "f") null))) null) null))
 
 ; Macros
 (assert-eq (frac (int 2) (int 1)) (mi (to-frac (int 2)) null))
