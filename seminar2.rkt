@@ -48,6 +48,40 @@
 ; Convert an int to a fraction by dividing it by one
 (define (to-frac x) (frac x (int 1)))
 
+; Find all used variable names inside an expression
+(define find-used
+  (lambda (x)
+    (cond [(valof? x) (list (valof-s x))]
+          ; return null on leaf nodes
+          [(or (int? x) (true? x) (false? x) (empty? x)) null]
+          [(frac? x) (append (find-used (frac-e1 x)) (find-used (frac-e2 x)))]
+          [(::? x) (append (find-used (::-e1 x)) (find-used (::-e2 x)))]
+          [(if-then-else? x) (append (find-used (if-then-else-cnd x))
+                                     (find-used (if-then-else-e1 x))
+                                     (find-used (if-then-else-e2 x)))]
+          [(is-int? x) (find-used (is-int-e x))]
+          [(is-bool? x) (find-used (is-bool-e x))]
+          [(is-frac? x) (find-used (is-frac-e x))]
+          [(is-list? x) (find-used (is-list-e x))]
+          [(add? x) (append (find-used (add-e1 x)) (find-used (add-e2 x)))]
+          [(mul? x) (append (find-used (mul-e1 x)) (find-used (mul-e2 x)))]
+          [(gt? x) (append (find-used (gt-e1 x)) (find-used (gt-e2 x)))]
+          [(both? x) (append (find-used (both-e1 x)) (find-used (both-e2 x)))]
+          [(any? x) (append (find-used (any-e1 x)) (find-used (any-e2 x)))]
+          [(!? x) (find-used (!-e x))]
+          [(hd? x) (find-used (hd-x x))]
+          [(tl? x) (find-used (tl-x x))]
+          [(is-empty? x) (find-used (is-empty-x x))]
+          [(@? x) (append (find-used (@-a x)) (find-used (@-b x)))]
+          [(numerator? x) (find-used (numerator-e x))]
+          [(denominator? x) (find-used (denominator-e x))]
+          [(var? x) (append (find-used (var-e1 x)) (find-used (var-e2 x)))]
+          [(fun? x) (find-used (fun-body x))]
+          [(proc? x) (find-used (proc-body x))]
+          [(envelope? x) (find-used (envelope-f x))]
+          [(call? x) (find-used (call-e x))]
+          [#t null])))
+
 (define (mi e env)
   (cond [(int? e) e]
         [(true? e) e]
@@ -145,8 +179,11 @@
          (let* ([no-shadow (remove-duplicates env #:key (lambda (x) (car x)))] ; shadowed vars
                 [no-params (remove* (cons (fun-name e) (fun-fargs e)) ; fargs and fname
                                     no-shadow
-                                    (lambda (x y) (equal? x (car y))))])
-           (envelope no-params e))]
+                                    (lambda (x y) (equal? x (car y))))]
+                [no-unused
+                 (let ([used (find-used e)])
+                   (filter (lambda (x) (member (car x) used)) no-params))])
+           (envelope no-unused e))]
         [(proc? e) e]
         [(envelope? e) e]
         [(call? e)
@@ -301,19 +338,31 @@
 ; check shadowed variables
 (assert-eq
  (list (cons "a" (int 2)) (cons "b" (true)))
- (envelope-env (mi (fun "f" null (true))
+ (envelope-env (mi (fun "f" null (add (valof "a") (valof "b")))
                    (list (cons "a" (int 2)) (cons "a" (int 3)) (cons "b" (true))))))
 
 ; check params removed from env
 (assert-eq
  (list (cons "b" (int 2)))
- (envelope-env (mi (fun "f" (list "a" "c") (true))
+ (envelope-env (mi (fun "f" (list "a" "c") (add (valof "a") (add (valof "b") (valof "c"))))
                    (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
 
 ; check function name removed from env
 (assert-eq
  (list (cons "a" (int 1)) (cons "c" (int 3)))
- (envelope-env (mi (fun "b" null (true))
+ (envelope-env (mi (fun "b" null (add (valof "a") (valof "c")))
+                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
+
+; find-used
+(assert-eq (list "a" "b") (find-used (:: (int 3) (:: (valof "a") (:: (valof "b") (empty))))))
+(assert-eq (list "a" "b")
+           (find-used (mi (fun "f" null (add (frac (valof "a") (int 2))
+                                             (frac (valof "b") (int 2)))) null)))
+
+; check unused removed from env
+(assert-eq
+ (list (cons "a" (int 1)))
+ (envelope-env (mi (fun "f" null (valof "a"))
                    (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
 
 
