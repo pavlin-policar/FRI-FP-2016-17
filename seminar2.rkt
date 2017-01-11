@@ -141,7 +141,12 @@
         [(var? e) (mi (var-e2 e) (cons (cons (var-s e) (mi (var-e1 e) env)) env))]
         [(valof? e) (cdr (assoc (valof-s e) env))]
         ; Functions
-        [(fun? e) (envelope env e)]
+        [(fun? e)
+         (let* ([no-shadow (remove-duplicates env #:key (lambda (x) (car x)))] ; shadowed vars
+                [no-params (remove* (cons (fun-name e) (fun-fargs e)) ; fargs and fname
+                                    no-shadow
+                                    (lambda (x y) (equal? x (car y))))])
+           (envelope no-params e))]
         [(proc? e) e]
         [(envelope? e) e]
         [(call? e)
@@ -164,10 +169,7 @@
                                     null
                                     (list (cons (fun-name (envelope-f f)) f))))]
                        ; Include locals with the outer environment
-                       ; Remove shadowed variables
-                       ; TODO: Find used variables in function and remove the unused ones
-                       [fenv (remove-duplicates (append locals (envelope-env f))
-                                                #:key (lambda (x) (car x)))])
+                       [fenv (append locals (envelope-env f))])
                 (mi (fun-body (envelope-f f)) fenv))]
              ; In the case that the variable gets shadowed and is not an actual function, simply
              ; return that value
@@ -252,6 +254,7 @@
 (assert-eq (int 4) (mi (var "_" (true) (int 4)) null))
 (assert-eq (int 4) (mi (valof "a") (list (cons "a" (int 4)))))
 (assert-eq (int 4) (mi (var "a" (int 3) (var "b" (int 1) (add (valof "a") (valof "b")))) '()))
+(assert-eq (int 2) (mi (var "a" (int 2) (call (fun "x" null (valof "a")) null)) null))
 ; test variable shadowing
 (assert-eq (int 1) (mi (var "a" (int 2) (var "a" (int 1) (valof "a"))) null))
 
@@ -280,10 +283,39 @@
         (mul (valof "a")
              (call (valof "power") (list (valof "a") (add (valof "x") (int -1))))))))
 (assert-eq (int 8) (mi (call power (list (int 2) (int 3))) null))
+; sum of list
+(define sum-of-list
+  (fun "sum-of-list" (list "ls")
+       (if-then-else
+        (is-empty (tl (valof "ls")))
+        (hd (valof "ls"))
+        (add (hd (valof "ls")) (call (valof "sum-of-list") (list (tl (valof "ls"))))))))
+(assert-eq (int 2) (mi (call sum-of-list (list (:: (int 2) (empty)))) null))
+(assert-eq (int 7) (mi (call sum-of-list (list (:: (int 2) (:: (int 3) (:: (int 2) (empty)))))) null))
 
 ; shadow function name
 (assert-eq (int 2) (mi (call (fun "f" null (var "f" (int 2) (valof "f"))) null) null))
 (assert-eq (int 2) (mi (call (fun "f" null (var "f" (int 2) (call (valof "f") null))) null) null))
+
+; clojure optimization
+; check shadowed variables
+(assert-eq
+ (list (cons "a" (int 2)) (cons "b" (true)))
+ (envelope-env (mi (fun "f" null (true))
+                   (list (cons "a" (int 2)) (cons "a" (int 3)) (cons "b" (true))))))
+
+; check params removed from env
+(assert-eq
+ (list (cons "b" (int 2)))
+ (envelope-env (mi (fun "f" (list "a" "c") (true))
+                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
+
+; check function name removed from env
+(assert-eq
+ (list (cons "a" (int 1)) (cons "c" (int 3)))
+ (envelope-env (mi (fun "b" null (true))
+                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
+
 
 ; Macros
 (assert-eq (frac (int 2) (int 1)) (mi (to-frac (int 2)) null))
