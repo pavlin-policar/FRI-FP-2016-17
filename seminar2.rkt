@@ -86,7 +86,14 @@
   (cond [(int? e) e]
         [(true? e) e]
         [(false? e) e]
-        [(::? e) (:: (mi (::-e1 e) env) (mi (::-e2 e) env))]
+        [(::? e)
+         (let ([v1 (mi (::-e1 e) env)]
+               [v2 (mi (::-e2 e) env)])
+           ; Proper handling of strange list structures
+           (cond [(and (empty? v1) (empty? v2)) (empty)]
+                 [(empty? v1) (if (::? v2) v2 (:: v2 (empty)))]
+                 [(empty? v2) (if (::? v1) v1 (:: v1 (empty)))]
+                 [#t (:: v1 v2)]))]
         [(empty? e) e]
         ; Convert fractions to their simplest form
         [(frac? e)
@@ -364,6 +371,42 @@
  (list (cons "a" (int 1)))
  (envelope-env (mi (fun "f" null (valof "a"))
                    (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
+
+; quicksort implementation
+(define lte-list
+  (fun "lte-list" (list "ls" "x")
+       (if-then-else
+        (is-empty (valof "ls"))
+        (empty)
+        (if-then-else
+         (any (lt (hd (valof "ls")) (valof "x")) (same (hd (valof "ls")) (valof "x")))
+         (:: (hd (valof "ls")) (call (valof "lte-list") (list (tl (valof "ls")) (valof "x"))))
+         (call (valof "lte-list") (list (tl (valof "ls")) (valof "x")))))))
+(define gt-list
+  (fun "gt-list" (list "ls" "x")
+       (if-then-else
+        (is-empty (valof "ls"))
+        (empty)
+        (if-then-else
+         (gt (hd (valof "ls")) (valof "x"))
+         (:: (hd (valof "ls")) (call (valof "gt-list") (list (tl (valof "ls")) (valof "x"))))
+         (call (valof "gt-list") (list (tl (valof "ls")) (valof "x")))))))
+(define quicksort
+  (fun "qs" (list "xs")
+       (var "lte" lte-list
+            (var "gt" gt-list
+                 (if-then-else
+                  (is-empty (valof "xs"))
+                  (empty)
+                  (@ (call (valof "qs") (list (call (valof "lte") (list (tl (valof "xs")) (hd (valof "xs"))))))
+                     (:: (hd (valof "xs"))
+                         (call (valof "qs") (list (call (valof "gt") (list (tl (valof "xs")) (hd (valof "xs")))))))))))))
+; test qs
+(assert-eq
+ (:: (int 1) (:: (int 2) (:: (int 3) (:: (int 4) (:: (int 5) (empty))))))
+ (mi (call quicksort
+           (list (:: (int 3) (:: (int 1) (:: (int 2) (:: (int 5) (:: (int 4) (empty))))))))
+     null))
 
 
 ; Macros
