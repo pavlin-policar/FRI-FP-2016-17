@@ -286,6 +286,10 @@
 
 (assert-eq (:: (int 2) (:: (int 3) (:: (int 4) (:: (int 5) (empty)))))
            (mi (@ (:: (int 2) (:: (int 3) (empty))) (:: (int 4) (:: (int 5) (empty)))) null))
+(assert-eq (:: (int 2) (:: (int 3) (empty)))
+           (mi (@ (:: (int 2) (:: (int 3) (empty))) (empty)) null))
+(assert-eq (:: (int 2) (:: (int 3) (empty)))
+           (mi (@ (empty) (:: (int 2) (:: (int 3) (empty)))) null))
 (assert-empty (mi (@ (empty) (empty)) null))
 
 ; Fraction operations
