@@ -222,19 +222,17 @@
 
 ; Macros
 ; NOTE: to-int is defined above `mi` function since it was used there as well
-(define (inv e) (let ([v e]) (frac (frac-e2 v) (frac-e1 v))))
-(define (~ e)
-  (let ([v e])
-    (cond [(int? e) (int (- 0 (int-n e)))]
-          [(frac? e) (frac (int (- 0 (int-n (frac-e1 e)))) (frac-e2 e))])))
+(define (inv e) (var "v" e (frac (denominator (valof "v")) (numerator (valof "v")))))
+(define (~ e) (mul e (int -1)))
 (define (lt e1 e2) (gt e2 e1))
 (define (same e1 e2)
-  (let ([v1 e1]
-        [v2 e2])
-    (! (any (gt v1 v2) (lt v1 v2)))))
+  (var "v1" e1
+       (var "v2" e2
+            (! (any (gt (valof "v1") (valof "v2")) (lt (valof "v1") (valof "v2")))))))
 
-
-; Begin test section
+;-----------------------------------------------------------------------------------------------------
+; BEGIN TEST SECTION
+;-----------------------------------------------------------------------------------------------------
 #||#
 
 ; Define assertion helpers
@@ -415,7 +413,7 @@
 (assert-eq (frac (int 4) (int 3)) (mi (inv (frac (add (int 1) (int 2)) (mul (int 2) (int 2)))) null))
 
 (assert-eq (int -5) (mi (~ (int 5)) null))
-(assert-eq (frac (int -1) (int 2)) (mi (~ (frac (int 1) (int 2))) null))
+(assert-eq (int 5) (mi (~ (int -5)) null))
 
 (assert-false (mi (lt (int 5) (int 3)) null))
 (assert-true (mi (lt (int 3) (int 5)) null))
