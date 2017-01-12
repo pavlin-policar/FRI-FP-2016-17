@@ -9,31 +9,31 @@
 (struct empty () #:transparent)
 
 ; Flow control
-(struct if-then-else (cnd e1 e2))
-(struct is-int (e))
-(struct is-bool (e))
-(struct is-frac (e))
-(struct is-list (e))
+(struct if-then-else (cnd e1 e2) #:transparent)
+(struct is-int (e) #:transparent)
+(struct is-bool (e) #:transparent)
+(struct is-frac (e) #:transparent)
+(struct is-list (e) #:transparent)
 
 ; Arithmetic
-(struct add (e1 e2))
-(struct mul (e1 e2))
-(struct gt (e1 e2))
+(struct add (e1 e2) #:transparent)
+(struct mul (e1 e2) #:transparent)
+(struct gt (e1 e2) #:transparent)
 
 ; Logical operations
-(struct both (e1 e2))
-(struct any (e1 e2))
-(struct ! (e))
+(struct both (e1 e2) #:transparent)
+(struct any (e1 e2) #:transparent)
+(struct ! (e) #:transparent)
 
 ; List operations
-(struct hd (x))
-(struct tl (x))
-(struct is-empty (x))
-(struct @ (a b))
+(struct hd (x) #:transparent)
+(struct tl (x) #:transparent)
+(struct is-empty (x) #:transparent)
+(struct @ (a b) #:transparent)
 
 ; Fraction operations
-(struct numerator (e))
-(struct denominator (e))
+(struct numerator (e) #:transparent)
+(struct denominator (e) #:transparent)
 
 ; Variables
 (struct var (s e1 e2) #:transparent)
