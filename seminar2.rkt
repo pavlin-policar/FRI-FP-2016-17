@@ -374,6 +374,12 @@
  (envelope-env (mi (fun "f" null (valof "a"))
                    (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
 
+
+(assert-eq
+ (list (cons "a" (int 1)) (cons "b" (int 2)))
+ (envelope-env (mi (fun "f" null (add (valof "a") (valof "b")))
+                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3)) (cons "d" (int 4))))))
+
 ; quicksort implementation
 (define lte-list
   (fun "lte-list" (list "ls" "x")
