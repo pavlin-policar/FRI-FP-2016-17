@@ -90,3 +90,12 @@
     (if (< start stop)
         (cons start (lambda () (range-till (+ start step) stop step)))
         null)))
+
+; FUNCTION STREAMS
+
+; This function returns a stream of funcitons that each access the n-th element of a list
+(define indices
+  (letrec ([get-nth (lambda (n ls) (if (< n 1) (car ls) (get-nth (- n 1) (cdr ls))))]
+           [f (lambda (n) (cons (lambda (ls) (get-nth n ls))
+                                (lambda () (f (+ n 1)))))])
+    (f 0)))
