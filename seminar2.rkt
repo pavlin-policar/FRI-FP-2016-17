@@ -227,6 +227,43 @@
        (var "v2" e2
             (! (any (gt (valof "v1") (valof "v2")) (lt (valof "v1") (valof "v2")))))))
 
+#| SML Like types
+
+Definition
+----------
+With this syntax, we can define types in the following manner:
+
+(datatype Color can be
+          Red or
+          Green or
+          Blue)
+
+This will define four different types: Color, Red, Green and Blue.
+
+Usage
+-----
+TODO
+
+|# 
+(define-syntax datatype
+  (syntax-rules (can be)
+    [(datatype type can be rest ...)
+     (begin
+       ; Create the base type struct
+       (struct type () #:transparent)
+       ; Create all the instances of the base type
+       (make-types type rest ...))]))
+
+(define-syntax make-types
+  (syntax-rules (or)
+    ; Match the final instance
+    [(make-types type instance) (struct instance type () #:transparent)]
+    ; Make sure we can match multiple instances of type
+    [(make-types type instance or rest ...)
+     (begin
+       (struct instance type () #:transparent)
+       (make-types type rest ...))]))
+
 ;-----------------------------------------------------------------------------------------------------
 ; BEGIN TEST SECTION
 ;-----------------------------------------------------------------------------------------------------
