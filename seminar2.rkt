@@ -45,9 +45,6 @@
 (struct envelope (env f) #:transparent)
 (struct call (e args) #:transparent)
 
-; Convert an int to a fraction by dividing it by one
-(define (to-frac x) (frac x (int 1)))
-
 ; Find all used variable names inside an expression
 (define find-used
   (lambda (x)
@@ -221,7 +218,7 @@
         [#t e]))
 
 ; Macros
-; NOTE: to-int is defined above `mi` function since it was used there as well
+(define (to-frac x) (frac x (int 1)))
 (define (inv e) (var "v" e (frac (denominator (valof "v")) (numerator (valof "v")))))
 (define (~ e) (mul e (int -1)))
 (define (lt e1 e2) (gt e2 e1))
@@ -408,7 +405,8 @@
                   (empty)
                   (@ (call (valof "qs") (list (call (valof "lte") (list (tl (valof "xs")) (hd (valof "xs"))))))
                      (:: (hd (valof "xs"))
-                         (call (valof "qs") (list (call (valof "gt") (list (tl (valof "xs")) (hd (valof "xs")))))))))))))
+                         (call (valof "qs") (list (call (valof "gt")
+                                                        (list (tl (valof "xs")) (hd (valof "xs")))))))))))))
 ; test qs
 (assert-eq
  (:: (int 1) (:: (int 2) (:: (int 3) (:: (int 4) (:: (int 5) (empty))))))
