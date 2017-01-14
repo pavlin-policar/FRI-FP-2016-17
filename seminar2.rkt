@@ -416,6 +416,50 @@
            (list (:: (int 3) (:: (int 1) (:: (int 2) (:: (int 5) (:: (int 4) (empty))))))))
      null))
 
+; map
+(define map2
+  (fun "map" (list "f" "ls")
+       (if-then-else
+        (is-empty (valof "ls"))
+        (empty)
+        (:: (call (valof "f") (list (hd (valof "ls"))))
+            (call (valof "map") (list (valof "f") (tl (valof "ls"))))))))
+(assert-eq
+ (:: (int 2) (:: (int 3) (:: (int 4) (empty))))
+ (mi (call map2 (list (fun "" (list "x") (add (valof "x") (int 1)))
+           (:: (int 1) (:: (int 2) (:: (int 3) (empty)))))) null))
+
+; reduce
+(define foldr
+  (fun "foldr" (list "f" "init" "ls")
+       (if-then-else
+        (is-empty (valof "ls"))
+        (valof "init")
+        (call (valof "foldr")
+              (list (valof "f")
+                    (call (valof "f") (list (hd (valof "ls")) (valof "init")))
+                    (tl (valof "ls")))))))
+(define add2 (fun "add2" (list "x" "y") (add (valof "x") (valof "y"))))
+(assert-eq
+ (int 6)
+ (mi (call foldr (list add2 (int 0) (:: (int 1) (:: (int 2) (:: (int 3) (empty)))))) null))
+
+; filter
+(define filter2
+  (fun "filter" (list "f" "ls")
+       (if-then-else
+        (is-empty (valof "ls"))
+        (empty)
+        (if-then-else
+         (call (valof "f") (list (hd (valof "ls"))))
+         (:: (hd (valof "ls")) (call (valof "filter") (list (valof "f") (tl (valof "ls")))))
+         (call (valof "filter") (list (valof "f") (tl (valof "ls"))))))))
+(assert-eq
+ (:: (true) (:: (false) (empty)))
+ (mi (call filter2 (list (fun "" (list "x") (is-bool (valof "x")))
+                         (:: (int 1) (:: (true) (:: (int 3) (:: (false) (:: (int 4) (empty))))))))
+     null))
+
 
 ; Macros
 (assert-eq (frac (int 2) (int 1)) (mi (to-frac (int 2)) null))
