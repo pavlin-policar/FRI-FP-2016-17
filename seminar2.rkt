@@ -45,6 +45,8 @@
 (struct envelope (env f) #:transparent)
 (struct call (e args) #:transparent)
 
+(struct sum (e1) #:transparent)
+
 ; Find all used variable names inside an expression
 (define find-used
   (lambda (x)
@@ -215,6 +217,9 @@
              ; In the case that the variable gets shadowed and is not an actual function, simply
              ; return that value
              [#t (mi f env)]))]
+        [(sum? e)
+         (let ([add2 (fun "add2" (list "x" "y") (add (valof "x") (valof "y")))])
+           (mi (call foldr (list add2 (int 0) (sum-e1 e))) env))]
         [#t e]))
 
 ; Macros
@@ -226,6 +231,13 @@
   (var "v1" e1
        (var "v2" e2
             (! (any (gt (valof "v1") (valof "v2")) (lt (valof "v1") (valof "v2")))))))
+(define (sum-macro e1)
+  (var "f" (fun "f" (list "ls")
+                (if-then-else
+                 (is-empty (valof "ls"))
+                 (int 0)
+                 (add (hd (valof "ls")) (call (valof "f") (list (tl (valof "ls")))))))
+       (call (valof "f") (list e1))))
 
 #| SML Like types
 
