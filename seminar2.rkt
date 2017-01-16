@@ -536,4 +536,20 @@ TODO
 (assert-false (mi (same (frac (int 1) (int 3)) (frac (int 1) (int 2))) null))
 (assert-false (mi (same (frac (int 1) (int 2)) (frac (int 1) (int 3))) null))
 
+; Additional exercises
+; add fractions
+(assert-eq
+ (frac (int 7) (int 2))
+ (mi (add (frac (int 1) (int 2)) (int 3)) null))
+
+; sum
+(assert-eq
+ (int 4)
+ (mi (var "x" (int 1) (sum (:: (int 1) (:: (add (int 1) (valof "x")) (:: (int 1) (empty)))))) null))
+
+; sum-macro
+(assert-eq
+ (int 4)
+ (mi (var "l" (:: (int 1) (:: (add (int 1) (int 1)) (:: (int 1) (empty)))) (sum-macro (valof "l"))) null))
+
 #||#
