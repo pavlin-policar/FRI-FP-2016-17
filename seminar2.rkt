@@ -187,7 +187,7 @@
                 [no-unused
                  (let ([used (find-used e)])
                    (filter (lambda (x) (member (car x) used)) no-params))])
-           (envelope no-unused e))]
+           (envelope env e))]
         [(proc? e) e]
         [(envelope? e) e]
         [(call? e)
@@ -379,40 +379,40 @@ TODO
 
 ; clojure optimization
 ; check shadowed variables
-(assert-eq
- (list (cons "a" (int 2)) (cons "b" (true)))
- (envelope-env (mi (fun "f" null (add (valof "a") (valof "b")))
-                   (list (cons "a" (int 2)) (cons "a" (int 3)) (cons "b" (true))))))
+;(assert-eq
+; (list (cons "a" (int 2)) (cons "b" (true)))
+; (envelope-env (mi (fun "f" null (add (valof "a") (valof "b")))
+;                   (list (cons "a" (int 2)) (cons "a" (int 3)) (cons "b" (true))))))
 
 ; check params removed from env
-(assert-eq
- (list (cons "b" (int 2)))
- (envelope-env (mi (fun "f" (list "a" "c") (add (valof "a") (add (valof "b") (valof "c"))))
-                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
+;(assert-eq
+; (list (cons "b" (int 2)))
+; (envelope-env (mi (fun "f" (list "a" "c") (add (valof "a") (add (valof "b") (valof "c"))))
+;                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
 
 ; check function name removed from env
-(assert-eq
- (list (cons "a" (int 1)) (cons "c" (int 3)))
- (envelope-env (mi (fun "b" null (add (valof "a") (valof "c")))
-                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
+;(assert-eq
+; (list (cons "a" (int 1)) (cons "c" (int 3)))
+; (envelope-env (mi (fun "b" null (add (valof "a") (valof "c")))
+;                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
 
 ; find-used
-(assert-eq (list "a" "b") (find-used (:: (int 3) (:: (valof "a") (:: (valof "b") (empty))))))
-(assert-eq (list "a" "b")
-           (find-used (mi (fun "f" null (add (frac (valof "a") (int 2))
-                                             (frac (valof "b") (int 2)))) null)))
+;(assert-eq (list "a" "b") (find-used (:: (int 3) (:: (valof "a") (:: (valof "b") (empty))))))
+;(assert-eq (list "a" "b")
+;           (find-used (mi (fun "f" null (add (frac (valof "a") (int 2))
+;                                             (frac (valof "b") (int 2)))) null)))
 
 ; check unused removed from env
-(assert-eq
- (list (cons "a" (int 1)))
- (envelope-env (mi (fun "f" null (valof "a"))
-                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
+;(assert-eq
+; (list (cons "a" (int 1)))
+; (envelope-env (mi (fun "f" null (valof "a"))
+;                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3))))))
 
 
-(assert-eq
- (list (cons "a" (int 1)) (cons "b" (int 2)))
- (envelope-env (mi (fun "f" null (add (valof "a") (valof "b")))
-                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3)) (cons "d" (int 4))))))
+;(assert-eq
+; (list (cons "a" (int 1)) (cons "b" (int 2)))
+; (envelope-env (mi (fun "f" null (add (valof "a") (valof "b")))
+;                   (list (cons "a" (int 1)) (cons "b" (int 2)) (cons "c" (int 3)) (cons "d" (int 4))))))
 
 ; quicksort implementation
 (define lte-list
